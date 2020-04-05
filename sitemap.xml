@@ -75,11 +75,6 @@
   </url>
   
   <url>
-    <loc>https://adotinthevoid.github.io/meta/</loc>
-    <priority>0</priority>
-  </url>
-  
-  <url>
     <loc>https://adotinthevoid.github.io/about/</loc>
   </url>
   
@@ -100,7 +95,15 @@
   </url>
   
   <url>
+    <loc>https://adotinthevoid.github.io/meta/</loc>
+  </url>
+  
+  <url>
     <loc>https://adotinthevoid.github.io/tags/</loc>
+  </url>
+  
+  <url>
+    <loc>https://adotinthevoid.github.io/theme/</loc>
   </url>
   
 </urlset>
