@@ -67,7 +67,7 @@ Syntax highting Syntax Highlighting is done via chroma on server.</description>
       <guid>https://adotinthevoid.github.io/theme/</guid>
       <description>This site runs a modified version of spf13’s hugo port of @mdo&amp;lsquo;s hyde theme for jekyll
 Modifications made:
- Use \(\KaTeX\) Better date format (Mon, Jan 2, 2006 to January 2, 2006) Have a blog and non blog section  Blog sections have dates, non-blog doesn&amp;rsquo;t Blog uses short list, non-blog doesn&amp;rsquo;t Home page has content, not blog list   No home link in sidebar: The site name above does that [Improved Copyright handling]  </description>
+ Use \(\KaTeX\) Better date format (Mon, Jan 2, 2006 to January 2, 2006) Have a blog and non blog section  Blog sections have dates, non-blog doesn&amp;rsquo;t Blog uses short list, non-blog doesn&amp;rsquo;t Home page has content, not blog list   No home link in sidebar: The site name above does that Improved Copyright handling: Allow customization of copyright text Add table of contents option  </description>
     </item>
     
   </channel>
