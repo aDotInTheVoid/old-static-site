@@ -5,19 +5,9 @@
     <link>https://adotinthevoid.github.io/</link>
     <description>Recent content on Nixon Enraght-Moony</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Thu, 15 Jan 2015 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="https://adotinthevoid.github.io/index.xml" rel="self" type="application/rss+xml" />
     
-    
-    <item>
-      <title>UCSMun</title>
-      <link>https://adotinthevoid.github.io/projects/ucsmun/</link>
-      <pubDate>Thu, 15 Jan 2015 00:00:00 +0000</pubDate>
-      
-      <guid>https://adotinthevoid.github.io/projects/ucsmun/</guid>
-      <description>&amp;lt;?php use Faker\Generator as Faker; $factory-&amp;gt;define(App\School::class, function (Faker $faker) { return [ &amp;#39;name&amp;#39; =&amp;gt; $faker-&amp;gt;company ]; }); </description>
-    </item>
     
     <item>
       <title>About me</title>
@@ -40,15 +30,6 @@ my history To be honest, I&amp;rsquo;m having some trouble remembering right now
     </item>
     
     <item>
-      <title>Gan art</title>
-      <link>https://adotinthevoid.github.io/projects/gan_ai/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      
-      <guid>https://adotinthevoid.github.io/projects/gan_ai/</guid>
-      <description>type TensorHandle struct { c *C.TFE_TensorHandle } // NewTensorHandle creates a new tensor handle from a tensor. func NewTensorHandle(t *Tensor) (*TensorHandle, error) { status := newStatus() cHandle := C.TFE_NewTensorHandle(t.c, status.c) if err := status.Err(); err != nil { status := newStatus() </description>
-    </item>
-    
-    <item>
       <title>Meta</title>
       <link>https://adotinthevoid.github.io/meta/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
@@ -67,7 +48,7 @@ Syntax highting Syntax Highlighting is done via chroma on server.</description>
       <guid>https://adotinthevoid.github.io/theme/</guid>
       <description>This site runs a modified version of spf13’s hugo port of @mdo&amp;lsquo;s hyde theme for jekyll
 Modifications made:
- Use \(\KaTeX\) Better date format (Mon, Jan 2, 2006 to January 2, 2006) Have a blog and non blog section  Blog sections have dates, non-blog doesn&amp;rsquo;t Blog uses short list, non-blog doesn&amp;rsquo;t Home page has content, not blog list   No home link in sidebar: The site name above does that Improved Copyright handling: Allow customization of copyright text Add table of contents option  </description>
+ Use \(\KaTeX\) Better date format (Mon, Jan 2, 2006 to January 2, 2006) Have a blog and non blog section  Blog sections have dates, non-blog doesn&amp;rsquo;t Blog uses short list, non-blog doesn&amp;rsquo;t Home page has content, not blog list   No home link in sidebar: The site name above does that Improved Copyright handling: Allow customization of copyright text Add table of contents option Add not_a_list type: This is a list type where the list is actualy a single.</description>
     </item>
     
   </channel>
