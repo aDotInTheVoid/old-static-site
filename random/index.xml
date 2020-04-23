@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Random on Nixon Enraght-Moony</title>
+    <link>https://adotinthevoid.github.io/random/</link>
+    <description>Recent content in Random on Nixon Enraght-Moony</description>
+    <generator>Hugo -- gohugo.io</generator>
+    
+	<atom:link href="https://adotinthevoid.github.io/random/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Rust Humour</title>
+      <link>https://adotinthevoid.github.io/random/rust_humour/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://adotinthevoid.github.io/random/rust_humour/</guid>
+      <description>&lt;p&gt;The rustc internals book has a section of &lt;a href=&#34;https://rustc-dev-guide.rust-lang.org/appendix/humorust.html&#34;&gt;rust humour&lt;/a&gt;. This is more of that&lt;/p&gt;</description>
+    </item>
+    
+  </channel>
+</rss>

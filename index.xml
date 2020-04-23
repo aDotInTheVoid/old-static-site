@@ -41,6 +41,15 @@ Syntax highting Syntax Highlighting is done via chroma on server.</description>
     </item>
     
     <item>
+      <title>Rust Humour</title>
+      <link>https://adotinthevoid.github.io/random/rust_humour/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://adotinthevoid.github.io/random/rust_humour/</guid>
+      <description>&lt;p&gt;The rustc internals book has a section of &lt;a href=&#34;https://rustc-dev-guide.rust-lang.org/appendix/humorust.html&#34;&gt;rust humour&lt;/a&gt;. This is more of that&lt;/p&gt;</description>
+    </item>
+    
+    <item>
       <title>Theme</title>
       <link>https://adotinthevoid.github.io/theme/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
