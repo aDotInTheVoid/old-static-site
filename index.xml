@@ -5,9 +5,21 @@
     <link>https://adotinthevoid.github.io/</link>
     <description>Recent content on Nixon Enraght-Moony</description>
     <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Wed, 20 May 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="https://adotinthevoid.github.io/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Metaregex: Python can be fast too</title>
+      <link>https://adotinthevoid.github.io/posts/2020/05/metaregex-python-can-be-fast-too/</link>
+      <pubDate>Wed, 20 May 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://adotinthevoid.github.io/posts/2020/05/metaregex-python-can-be-fast-too/</guid>
+      <description>1
+Problem Statement I wanted to try to implement this in rust as something to do during quarantine. Doing so lead me down a rabbit whole of profiling, optimization and python performance, so I thought it was worth writing about.
+Obviously, the first step was to see if someone had already done this someone else has. It turns out someone has, and that when that person is Peter Norvig, you should probably read it.</description>
+    </item>
     
     <item>
       <title>About me</title>

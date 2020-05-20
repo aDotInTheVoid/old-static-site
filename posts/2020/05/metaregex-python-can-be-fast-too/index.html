@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" >
+
+<head>
+  <link href="https://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.70.0" />
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Metaregex: Python can be fast too &middot; Nixon Enraght-Moony</title>
+  <meta name="description" content="" />
+
+  
+  <link type="text/css" rel="stylesheet" href="https://adotinthevoid.github.io/css/print.css" media="print">
+  <link type="text/css" rel="stylesheet" href="https://adotinthevoid.github.io/css/poole.css">
+  <link type="text/css" rel="stylesheet" href="https://adotinthevoid.github.io/css/syntax.css">
+  <link type="text/css" rel="stylesheet" href="https://adotinthevoid.github.io/css/hyde.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Abril+Fatface|PT+Sans:400,400i,700">
+
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
+  
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css"
+    integrity="sha384-zB1R0rpPzHqg7Kpt0Aljp8JPLqbXI3bhnPWROx27a9N0Ll6ZP/+DiW/UqRcLbRjq" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js"
+    integrity="sha384-y23I5Q6l+B6vatafAwxRu/0oK/79VlbSz7Q9aiSZUvyWYIYsd+qj+o24G5ZU2zJz"
+    crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/contrib/auto-render.min.js"
+    integrity="sha384-kWPLUVMOks5AQFrykwIup5lo0m3iMkkHrD0uJ4H5cjeGihAutqP0yW0J6dpFiVkI" crossorigin="anonymous"
+    onload="renderMathInElement(document.body);"></script>
+
+  
+</head>
+
+  <body class="theme-base-0b ">
+  <aside class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      <a href="https://adotinthevoid.github.io/">
+        <h1>Nixon Enraght-Moony</h1>
+      </a>
+      <p class="lead">
+         Rust and other joys 
+      </p>
+    </div>
+
+    <nav>
+      <ul class="sidebar-nav">
+        
+        <li><a href="/posts"> Blog </a></li><li><a href="https://github.com/adotinthevoid/"> Github </a></li><li><a href="https://www.linkedin.com/in/nixon-enraght-moony-b68587187/"> LinkedIn </a></li>
+      </ul>
+    </nav>
+
+    <p>
+      
+        &copy; 2020. <a href=/meta/#copyright>Some Rights Reserved</a>
+      
+    </p>
+  </div>
+</aside>
+
+    <main class="content container">
+    <div class="post">
+  <h1>Metaregex: Python can be fast too</h1>
+  <time datetime=2020-05-20T00:00:00Z class="post-date">May 20, 2020</time>
+  
+  <p><a href="https://xkcd.com/1313/"><img src="https://imgs.xkcd.com/comics/regex_golf.png" alt="xkcd 1313"></a>
+<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup></p>
+<h2 id="problem-statement">Problem Statement</h2>
+<p>I wanted to try to implement this in rust as something to do during
+quarantine. Doing so lead me down a rabbit whole of profiling, optimization and
+python performance, so I thought it was worth writing about.</p>
+<p>Obviously, the first step was to see if someone had already done this someone
+else has. It turns out <a href="https://nbviewer.jupyter.org/url/norvig.com/ipython/xkcd1313.ipynb">someone has</a>,
+and that when that person is <a href="https://en.wikipedia.org/wiki/Peter_Norvig">Peter Norvig</a>,
+you should probably read it.</p>
+<p>I ended up basing my code around his algorithm. This means for this post to
+make sense, you should go read his solution. In addition, it&rsquo;s also a<br>
+delightful piece of algorithm design and pythonic code</p>
+<p>The challenge is to port Norvig&rsquo;s python solution to rust to increase
+performance. Specificity:</p>
+<ol>
+<li>No algorithm changes. This needs to be an apples to apples comparison.</li>
+<li>No custom regex code. Norvig uses pythons regex implementation, so I will
+use the <code>regex</code> crate. This will become important later.</li>
+</ol>
+<h2 id="naïve-port">Naïve Port</h2>
+<p>Now lets get into the first version code. The story I want to tell is not of the
+initial code, but of the improvements made to it. This is just the first thing
+that worked.</p>
+<div class="highlight"><pre style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#00a8c8">use</span> <span style="color:#111">itertools</span>::<span style="color:#111">Itertools</span><span style="color:#111">;</span>
+<span style="color:#00a8c8">use</span> <span style="color:#111">regex</span>::<span style="color:#111">Regex</span><span style="color:#111">;</span>
+<span style="color:#00a8c8">use</span> <span style="color:#111">std</span>::<span style="color:#111">collections</span>::<span style="color:#111">HashSet</span><span style="color:#111">;</span>
+
+<span style="color:#00a8c8">type</span> <span style="color:#75af00">Set</span><span style="color:#f92672">&lt;</span><span style="color:#75af00">&#39;a</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">=</span> <span style="color:#111">HashSet</span><span style="color:#f92672">&lt;&amp;</span><span style="color:#75af00">&#39;a</span> <span style="color:#00a8c8">str</span><span style="color:#f92672">&gt;</span><span style="color:#111">;</span>
+
+<span style="color:#00a8c8">const</span> <span style="color:#111">WINNERS</span>: <span style="color:#00a8c8">&amp;</span><span style="color:#00a8c8">str</span> <span style="color:#f92672">=</span>
+    <span style="color:#960050;background-color:#1e0010">&#34;</span><span style="color:#111">washington</span> <span style="color:#111">adams</span> <span style="color:#111">jefferson</span> <span style="color:#111">jefferson</span> <span style="color:#111">madison</span> <span style="color:#111">madison</span> <span style="color:#111">monroe</span> <span style="color:#960050;background-color:#1e0010">\</span>
+     <span style="color:#111">monroe</span> <span style="color:#111">adams</span> <span style="color:#111">jackson</span> <span style="color:#111">jackson</span> <span style="color:#111">van</span><span style="color:#f92672">-</span><span style="color:#111">buren</span> <span style="color:#111">harrison</span> <span style="color:#111">polk</span> <span style="color:#111">taylor</span> <span style="color:#960050;background-color:#1e0010">\</span>
+     <span style="color:#111">pierce</span> <span style="color:#111">buchanan</span> <span style="color:#111">lincoln</span> <span style="color:#111">lincoln</span> <span style="color:#111">grant</span> <span style="color:#111">grapartnt</span> <span style="color:#111">hayes</span> <span style="color:#111">garfield</span> <span style="color:#960050;background-color:#1e0010">\</span>
+     <span style="color:#111">cleveland</span> <span style="color:#111">harrison</span> <span style="color:#111">cleveland</span> <span style="color:#111">mckinley</span> <span style="color:#111">mckinley</span> <span style="color:#111">roosevelt</span> <span style="color:#111">taft</span> <span style="color:#960050;background-color:#1e0010">\</span>
+     <span style="color:#111">wilson</span> <span style="color:#111">wilson</span> <span style="color:#111">harding</span> <span style="color:#111">coolidge</span> <span style="color:#111">hoover</span> <span style="color:#111">roosevelt</span> <span style="color:#111">roosevelt</span> <span style="color:#960050;background-color:#1e0010">\</span>
+     <span style="color:#111">roosevelt</span> <span style="color:#111">roosevelt</span> <span style="color:#111">truman</span> <span style="color:#111">eisenhower</span> <span style="color:#111">eisenhower</span> <span style="color:#111">kennedy</span> <span style="color:#960050;background-color:#1e0010">\</span>
+     <span style="color:#111">johnson</span> <span style="color:#111">nixon</span> <span style="color:#111">nixon</span> <span style="color:#111">carter</span> <span style="color:#111">reagan</span> <span style="color:#111">reagan</span> <span style="color:#111">bush</span> <span style="color:#111">clinton</span> <span style="color:#111">clinton</span> <span style="color:#960050;background-color:#1e0010">\</span>
+     <span style="color:#111">bush</span> <span style="color:#111">bush</span> <span style="color:#111">obama</span> <span style="color:#111">obama</span> <span style="color:#111">trump</span><span style="color:#960050;background-color:#1e0010">&#34;</span><span style="color:#111">;</span>
+
+<span style="color:#00a8c8">const</span> <span style="color:#111">LOSERS</span>: <span style="color:#00a8c8">&amp;</span><span style="color:#00a8c8">str</span> <span style="color:#f92672">=</span>
+    <span style="color:#960050;background-color:#1e0010">&#34;</span><span style="color:#111">clinton</span> <span style="color:#111">jefferson</span> <span style="color:#111">adams</span> <span style="color:#111">pinckney</span> <span style="color:#111">pinckney</span> <span style="color:#111">clinton</span> <span style="color:#111">king</span> <span style="color:#111">adams</span> <span style="color:#960050;background-color:#1e0010">\</span>
+     <span style="color:#111">jackson</span> <span style="color:#111">adams</span> <span style="color:#111">clay</span> <span style="color:#111">van</span><span style="color:#f92672">-</span><span style="color:#111">buren</span> <span style="color:#111">van</span><span style="color:#f92672">-</span><span style="color:#111">buren</span> <span style="color:#111">clay</span> <span style="color:#111">cass</span> <span style="color:#111">scott</span> <span style="color:#111">fremont</span> <span style="color:#960050;background-color:#1e0010">\</span>
+     <span style="color:#111">breckinridge</span> <span style="color:#111">mcclellan</span> <span style="color:#111">seymour</span> <span style="color:#111">greeley</span> <span style="color:#111">tilden</span> <span style="color:#111">hancock</span> <span style="color:#111">blaine</span> <span style="color:#960050;background-color:#1e0010">\</span>
+     <span style="color:#111">cleveland</span> <span style="color:#111">harrison</span> <span style="color:#111">bryan</span> <span style="color:#111">bryan</span> <span style="color:#111">parker</span> <span style="color:#111">bryan</span> <span style="color:#111">roosevelt</span> <span style="color:#111">hughes</span> <span style="color:#960050;background-color:#1e0010">\</span>
+     <span style="color:#111">cox</span> <span style="color:#111">davis</span> <span style="color:#111">smith</span> <span style="color:#111">hoover</span> <span style="color:#111">landon</span> <span style="color:#111">willkie</span> <span style="color:#111">dewey</span> <span style="color:#111">dewey</span> <span style="color:#111">stevenson</span> <span style="color:#960050;background-color:#1e0010">\</span>
+     <span style="color:#111">stevenson</span> <span style="color:#111">nixon</span> <span style="color:#111">goldwater</span> <span style="color:#111">humphrey</span> <span style="color:#111">mcgovern</span> <span style="color:#111">ford</span> <span style="color:#111">carter</span> <span style="color:#960050;background-color:#1e0010">\</span>
+     <span style="color:#111">mondale</span> <span style="color:#111">dukakis</span> <span style="color:#111">bush</span> <span style="color:#111">dole</span> <span style="color:#111">gore</span> <span style="color:#111">kerry</span> <span style="color:#111">mccain</span> <span style="color:#111">romney</span> <span style="color:#111">clinton</span><span style="color:#960050;background-color:#1e0010">&#34;</span><span style="color:#111">;</span>
+
+<span style="color:#00a8c8">const</span> <span style="color:#111">START</span>: <span style="color:#00a8c8">u8</span> <span style="color:#f92672">=</span> <span style="color:#d88200">b&#39;^&#39;</span><span style="color:#111">;</span>
+<span style="color:#00a8c8">const</span> <span style="color:#111">DOT</span>: <span style="color:#00a8c8">u8</span> <span style="color:#f92672">=</span> <span style="color:#d88200">b&#39;.&#39;</span><span style="color:#111">;</span>
+<span style="color:#00a8c8">const</span> <span style="color:#111">END</span>: <span style="color:#00a8c8">u8</span> <span style="color:#f92672">=</span> <span style="color:#d88200">b&#39;$&#39;</span><span style="color:#111">;</span>
+</code></pre></div><p>Things to note here:</p>
+<ol>
+<li>I&rsquo;ve added new winners and looser to reflect the election status at the time
+of writing</li>
+<li>I&rsquo;ve used the <a href="https://docs.rs/itertools/0.9.0/itertools/"><code>Itertools</code></a> crate
+for the
+<a href="https://docs.rs/itertools/0.9.0/itertools/trait.Itertools.html#method.cartesian_product"><code>cartesian_product</code></a>
+method</li>
+</ol>
+<div class="highlight"><pre style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">fn</span> <span style="color:#75af00">main</span><span style="color:#111">()</span> <span style="color:#111">{</span>
+    <span style="color:#00a8c8">let</span> <span style="color:#00a8c8">mut</span> <span style="color:#111">winners</span>: <span style="color:#75af00">HashSet</span><span style="color:#f92672">&lt;</span><span style="color:#111">_</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">=</span>
+        <span style="color:#111">WINNERS</span><span style="color:#111">.</span><span style="color:#111">split_whitespace</span><span style="color:#111">().</span><span style="color:#111">collect</span><span style="color:#111">();</span>
+    <span style="color:#00a8c8">let</span> <span style="color:#00a8c8">mut</span> <span style="color:#111">losers</span>: <span style="color:#75af00">HashSet</span><span style="color:#f92672">&lt;</span><span style="color:#111">_</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">=</span> <span style="color:#111">LOSERS</span>
+        <span style="color:#111">.</span><span style="color:#111">split_whitespace</span><span style="color:#111">()</span>
+        <span style="color:#111">.</span><span style="color:#111">collect</span>::<span style="color:#f92672">&lt;</span><span style="color:#111">Set</span><span style="color:#f92672">&gt;</span><span style="color:#111">()</span>
+        <span style="color:#111">.</span><span style="color:#111">difference</span><span style="color:#111">(</span><span style="color:#f92672">&amp;</span><span style="color:#111">winners</span><span style="color:#111">)</span>
+        <span style="color:#111">.</span><span style="color:#111">map</span><span style="color:#111">(</span><span style="color:#f92672">|</span><span style="color:#111">x</span><span style="color:#f92672">|</span> <span style="color:#f92672">*</span><span style="color:#111">x</span><span style="color:#111">)</span>
+        <span style="color:#111">.</span><span style="color:#111">collect</span>::<span style="color:#f92672">&lt;</span><span style="color:#111">HashSet</span><span style="color:#f92672">&lt;</span><span style="color:#111">_</span><span style="color:#f92672">&gt;&gt;</span><span style="color:#111">();</span>
+
+    <span style="color:#111">losers</span><span style="color:#111">.</span><span style="color:#111">insert</span><span style="color:#111">(</span><span style="color:#d88200">&#34;fillmore&#34;</span><span style="color:#111">);</span>
+    <span style="color:#111">losers</span><span style="color:#111">.</span><span style="color:#111">remove</span><span style="color:#111">(</span><span style="color:#d88200">&#34;fremont&#34;</span><span style="color:#111">);</span>
+
+    <span style="color:#111">println</span><span style="color:#f92672">!</span><span style="color:#111">(</span><span style="color:#d88200">&#34;{}&#34;</span><span style="color:#111">,</span> <span style="color:#111">find_regex</span><span style="color:#111">(</span><span style="color:#f92672">&amp;</span><span style="color:#00a8c8">mut</span> <span style="color:#111">winners</span><span style="color:#111">,</span> <span style="color:#f92672">&amp;</span><span style="color:#111">losers</span><span style="color:#111">));</span>
+<span style="color:#111">}</span>
+</code></pre></div><p>The main function is quite unwieldy for what it needs to do. We need to use the
+<a href="https://doc.rust-lang.org/stable/std/collections/hash_set/struct.HashSet.html#method.difference"><code>difference</code></a>
+method as <a href="https://doc.rust-lang.org/stable/std/collections/hash_set/struct.HashSet.html#impl-Sub%3C%26%27_%20HashSet%3CT%2C%20S%3E%3E"><code>Sub&lt;HashSet&gt; for &amp;HashSet</code></a>
+requires the elements to be <code>Clone</code>.</p>
+<p>Additionally <code>difference</code> returns an iterator of references, but as the original
+Set had <code>&amp;str</code> the item is now <code>&amp;&amp;str</code> so we need to dereference it before we
+collect to a Set.</p>
+<div class="highlight"><pre style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#00a8c8">fn</span> <span style="color:#75af00">find_regex</span><span style="color:#111">(</span><span style="color:#111">winners</span>: <span style="color:#00a8c8">&amp;</span><span style="color:#75af00">mut</span> <span style="color:#111">Set</span><span style="color:#111">,</span> <span style="color:#111">losers</span>: <span style="color:#00a8c8">&amp;</span><span style="color:#75af00">Set</span><span style="color:#111">)</span> -&gt; <span style="color:#111">String</span> <span style="color:#111">{</span>
+    <span style="color:#00a8c8">let</span> <span style="color:#00a8c8">mut</span> <span style="color:#111">pool</span>: <span style="color:#75af00">HashSet</span><span style="color:#f92672">&lt;</span><span style="color:#111">_</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">=</span>
+        <span style="color:#111">regex_parts</span><span style="color:#111">(</span><span style="color:#f92672">&amp;</span><span style="color:#111">winners</span><span style="color:#111">,</span> <span style="color:#f92672">&amp;</span><span style="color:#111">losers</span><span style="color:#111">).</span><span style="color:#111">collect</span><span style="color:#111">();</span>
+    <span style="color:#00a8c8">let</span> <span style="color:#00a8c8">mut</span> <span style="color:#111">solutions</span>: <span style="color:#111">Vec</span><span style="color:#f92672">&lt;</span><span style="color:#111">String</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">=</span> <span style="color:#111">vec</span><span style="color:#f92672">!</span><span style="color:#111">[];</span>
+    <span style="color:#75715e">// Iterate until we match all winners
+</span><span style="color:#75715e"></span>    <span style="color:#00a8c8">while</span> <span style="color:#111">winners</span><span style="color:#111">.</span><span style="color:#111">len</span><span style="color:#111">()</span> <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span> <span style="color:#111">{</span>
+        <span style="color:#75715e">// Select best candidate from pool
+</span><span style="color:#75715e"></span>        <span style="color:#00a8c8">let</span> <span style="color:#111">best</span> <span style="color:#f92672">=</span> <span style="color:#111">pool</span><span style="color:#111">.</span><span style="color:#111">iter</span><span style="color:#111">().</span><span style="color:#111">max_by_key</span><span style="color:#111">(</span><span style="color:#f92672">|</span><span style="color:#111">pat</span><span style="color:#f92672">|</span> <span style="color:#111">{</span>
+            <span style="color:#ae81ff">4</span> <span style="color:#f92672">*</span> <span style="color:#111">matches</span><span style="color:#111">(</span><span style="color:#111">pat</span><span style="color:#111">,</span> <span style="color:#111">winners</span><span style="color:#111">.</span><span style="color:#111">iter</span><span style="color:#111">().</span><span style="color:#111">map</span><span style="color:#111">(</span><span style="color:#f92672">|&amp;</span><span style="color:#111">x</span><span style="color:#f92672">|</span> <span style="color:#111">x</span><span style="color:#111">)).</span><span style="color:#111">count</span><span style="color:#111">()</span>
+                <span style="color:#00a8c8">as</span> <span style="color:#00a8c8">i64</span>
+                <span style="color:#f92672">-</span> <span style="color:#111">pat</span><span style="color:#111">.</span><span style="color:#111">len</span><span style="color:#111">()</span> <span style="color:#00a8c8">as</span> <span style="color:#00a8c8">i64</span>
+        <span style="color:#111">});</span>
+        <span style="color:#75715e">// Candidate may be none, so we need to handle that
+</span><span style="color:#75715e"></span>        <span style="color:#00a8c8">if</span> <span style="color:#00a8c8">let</span> <span style="color:#111">Some</span><span style="color:#111">(</span><span style="color:#111">best_part</span><span style="color:#111">)</span> <span style="color:#f92672">=</span> <span style="color:#111">best</span> <span style="color:#111">{</span>
+            <span style="color:#75715e">// Add to solutions
+</span><span style="color:#75715e"></span>            <span style="color:#111">solutions</span><span style="color:#111">.</span><span style="color:#111">push</span><span style="color:#111">(</span><span style="color:#111">best_part</span><span style="color:#111">.</span><span style="color:#111">clone</span><span style="color:#111">());</span>
+            <span style="color:#75715e">// Remove entries matched by new regex
+</span><span style="color:#75715e"></span>            <span style="color:#111">winners</span><span style="color:#111">.</span><span style="color:#111">retain</span><span style="color:#111">(</span><span style="color:#f92672">|</span><span style="color:#111">entry</span><span style="color:#f92672">|</span> <span style="color:#111">{</span>
+                <span style="color:#f92672">!</span><span style="color:#111">Regex</span>::<span style="color:#111">new</span><span style="color:#111">(</span><span style="color:#111">best_part</span><span style="color:#111">).</span><span style="color:#111">unwrap</span><span style="color:#111">().</span><span style="color:#111">is_match</span><span style="color:#111">(</span><span style="color:#111">entry</span><span style="color:#111">)</span>
+            <span style="color:#111">});</span>
+            <span style="color:#75715e">// Remove regex&#39;s that no longer match anything
+</span><span style="color:#75715e"></span>            <span style="color:#111">pool</span><span style="color:#111">.</span><span style="color:#111">retain</span><span style="color:#111">(</span><span style="color:#f92672">|</span><span style="color:#111">pattern</span><span style="color:#f92672">|</span> <span style="color:#111">{</span>
+                <span style="color:#111">matches</span><span style="color:#111">(</span><span style="color:#111">pattern</span><span style="color:#111">,</span> <span style="color:#111">winners</span><span style="color:#111">.</span><span style="color:#111">iter</span><span style="color:#111">().</span><span style="color:#111">map</span><span style="color:#111">(</span><span style="color:#f92672">|&amp;</span><span style="color:#111">x</span><span style="color:#f92672">|</span> <span style="color:#111">x</span><span style="color:#111">))</span>
+                    <span style="color:#111">.</span><span style="color:#111">next</span><span style="color:#111">()</span>
+                    <span style="color:#111">.</span><span style="color:#111">is_some</span><span style="color:#111">()</span>
+            <span style="color:#111">});</span>
+        <span style="color:#111">}</span> <span style="color:#00a8c8">else</span> <span style="color:#111">{</span>
+            <span style="color:#111">eprintln</span><span style="color:#f92672">!</span><span style="color:#111">(</span><span style="color:#d88200">&#34;I don&#39;t think it can be done&#34;</span><span style="color:#111">);</span>
+        <span style="color:#111">}</span>
+    <span style="color:#111">}</span>
+    <span style="color:#111">solutions</span><span style="color:#111">.</span><span style="color:#111">join</span><span style="color:#111">(</span><span style="color:#d88200">&#34;|&#34;</span><span style="color:#111">)</span>
+<span style="color:#111">}</span>
+</code></pre></div><p>This mainloop works fairly well. We keep adding the best solution, and then use
+<a href="https://doc.rust-lang.org/stable/std/collections/hash_set/struct.HashSet.html#method.retain"><code>retain</code></a>
+to remove matched winners and patterns that no longer match.</p>
+<p>One interesting thing is in the fitness function (the closure inside
+<code>max_by_key</code>) we need to convert to a signed integer, otherwise the length will
+underflow and we end up with</p>
+<pre><code>^taft$|^bush$|^polk$|^obama$|^hayes$|^trump$|^nixon$|^adams$|^grant$
+|^truman$|^taylor$|^monroe$|^wilson$|^carter$|^hoover$|^pierce$
+|^reagan$|^lincoln$|^harding$|^jackson$|^kennedy$|^madison$|^johnson$
+|^clinton$|^coolidge$|^buchanan$|^harrison$|^garfield$|^mckinley$
+|^cleveland$|^grapartnt$|^roosevelt$|^van-buren$|^jefferson$
+|^eisenhower$|^washington$`
+</code></pre><div class="highlight"><pre style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#00a8c8">fn</span> <span style="color:#75af00">regex_parts</span><span style="color:#f92672">&lt;</span><span style="color:#75af00">&#39;a</span><span style="color:#f92672">&gt;</span><span style="color:#111">(</span>
+    <span style="color:#111">winners</span>: <span style="color:#00a8c8">&amp;</span><span style="color:#75af00">&#39;a</span> <span style="color:#111">Set</span><span style="color:#f92672">&lt;</span><span style="color:#75af00">&#39;a</span><span style="color:#f92672">&gt;</span><span style="color:#111">,</span>
+    <span style="color:#111">losers</span>: <span style="color:#00a8c8">&amp;</span><span style="color:#75af00">&#39;a</span> <span style="color:#111">Set</span><span style="color:#f92672">&lt;</span><span style="color:#75af00">&#39;a</span><span style="color:#f92672">&gt;</span>
+<span style="color:#111">)</span> -&gt; <span style="color:#75af00">impl</span> <span style="color:#111">Iterator</span><span style="color:#f92672">&lt;</span><span style="color:#111">Item</span> <span style="color:#f92672">=</span> <span style="color:#111">String</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">+</span> <span style="color:#75af00">&#39;a</span> <span style="color:#111">{</span>
+    <span style="color:#00a8c8">let</span> <span style="color:#111">whole</span> <span style="color:#f92672">=</span> <span style="color:#111">winners</span><span style="color:#111">.</span><span style="color:#111">iter</span><span style="color:#111">().</span><span style="color:#111">map</span><span style="color:#111">(</span><span style="color:#f92672">|</span><span style="color:#111">x</span><span style="color:#f92672">|</span> <span style="color:#111">format</span><span style="color:#f92672">!</span><span style="color:#111">(</span><span style="color:#d88200">&#34;^{}$&#34;</span><span style="color:#111">,</span> <span style="color:#111">x</span><span style="color:#111">));</span>
+    <span style="color:#00a8c8">let</span> <span style="color:#111">parts</span> <span style="color:#f92672">=</span> <span style="color:#111">whole</span>
+        <span style="color:#111">.</span><span style="color:#111">clone</span><span style="color:#111">()</span>
+        <span style="color:#111">.</span><span style="color:#111">flat_map</span><span style="color:#111">(</span><span style="color:#111">subparts</span><span style="color:#111">)</span>
+        <span style="color:#111">.</span><span style="color:#111">flat_map</span><span style="color:#111">(</span><span style="color:#111">dotify</span><span style="color:#111">)</span>
+        <span style="color:#111">.</span><span style="color:#111">filter</span><span style="color:#111">(</span><span style="color:#00a8c8">move</span> <span style="color:#f92672">|</span><span style="color:#111">part</span><span style="color:#f92672">|</span> <span style="color:#111">{</span>
+            <span style="color:#111">losers</span>
+                <span style="color:#111">.</span><span style="color:#111">iter</span><span style="color:#111">()</span>
+                <span style="color:#111">.</span><span style="color:#111">all</span><span style="color:#111">(</span><span style="color:#f92672">|</span><span style="color:#111">loser</span><span style="color:#f92672">|</span> <span style="color:#f92672">!</span><span style="color:#111">Regex</span>::<span style="color:#111">new</span><span style="color:#111">(</span><span style="color:#111">part</span><span style="color:#111">).</span><span style="color:#111">unwrap</span><span style="color:#111">().</span><span style="color:#111">is_match</span><span style="color:#111">(</span><span style="color:#111">loser</span><span style="color:#111">))</span>
+        <span style="color:#111">});</span>
+    <span style="color:#111">whole</span><span style="color:#111">.</span><span style="color:#111">chain</span><span style="color:#111">(</span><span style="color:#111">parts</span><span style="color:#111">)</span>
+<span style="color:#111">}</span>
+</code></pre></div><p>This is relay nice. We can use
+<a href="https://doc.rust-lang.org/stable/std/iter/trait.Iterator.html#method.flat_map"><code>flat_map</code></a>
+to first expand every winner into their subparts and then expand the subparts
+into all the dotted versions. Then a filter to check that they don&rsquo;t match any
+losers ensures all the parts will work.</p>
+<div class="highlight"><pre style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#00a8c8">fn</span> <span style="color:#75af00">dotify</span><span style="color:#111">(</span><span style="color:#111">word</span>: <span style="color:#111">String</span><span style="color:#111">)</span> -&gt; <span style="color:#75af00">impl</span> <span style="color:#111">Iterator</span><span style="color:#f92672">&lt;</span><span style="color:#111">Item</span> <span style="color:#f92672">=</span> <span style="color:#111">String</span><span style="color:#f92672">&gt;</span> <span style="color:#111">{</span>
+    <span style="color:#00a8c8">let</span> <span style="color:#111">has_front</span> <span style="color:#f92672">=</span> <span style="color:#111">(</span><span style="color:#111">word</span><span style="color:#111">.</span><span style="color:#111">as_bytes</span><span style="color:#111">()[</span><span style="color:#ae81ff">0</span><span style="color:#111">]</span> <span style="color:#f92672">==</span> <span style="color:#111">START</span><span style="color:#111">)</span> <span style="color:#00a8c8">as</span> <span style="color:#00a8c8">usize</span><span style="color:#111">;</span>
+    <span style="color:#00a8c8">let</span> <span style="color:#111">has_end</span> <span style="color:#f92672">=</span> <span style="color:#111">(</span><span style="color:#111">word</span><span style="color:#111">.</span><span style="color:#111">as_bytes</span><span style="color:#111">()[</span><span style="color:#111">word</span><span style="color:#111">.</span><span style="color:#111">len</span><span style="color:#111">()</span> <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span><span style="color:#111">]</span> <span style="color:#f92672">==</span> <span style="color:#111">END</span><span style="color:#111">)</span> <span style="color:#00a8c8">as</span> <span style="color:#00a8c8">usize</span><span style="color:#111">;</span>
+    <span style="color:#00a8c8">let</span> <span style="color:#111">len</span> <span style="color:#f92672">=</span> <span style="color:#111">word</span><span style="color:#111">.</span><span style="color:#111">len</span><span style="color:#111">()</span> <span style="color:#f92672">-</span> <span style="color:#111">has_front</span> <span style="color:#f92672">-</span> <span style="color:#111">has_end</span><span style="color:#111">;</span>
+    <span style="color:#111">(</span><span style="color:#ae81ff">0</span><span style="color:#111">..</span><span style="color:#ae81ff">2_</span><span style="color:#00a8c8">usize</span><span style="color:#111">.</span><span style="color:#111">pow</span><span style="color:#111">(</span><span style="color:#111">len</span> <span style="color:#00a8c8">as</span> <span style="color:#00a8c8">u32</span><span style="color:#111">))</span>
+        <span style="color:#111">.</span><span style="color:#111">map</span><span style="color:#111">(</span><span style="color:#00a8c8">move</span> <span style="color:#f92672">|</span><span style="color:#111">x</span><span style="color:#f92672">|</span> <span style="color:#111">x</span> <span style="color:#f92672">&lt;&lt;</span> <span style="color:#111">has_front</span><span style="color:#111">)</span>
+        <span style="color:#111">.</span><span style="color:#111">map</span><span style="color:#111">(</span><span style="color:#00a8c8">move</span> <span style="color:#f92672">|</span><span style="color:#111">n</span><span style="color:#f92672">|</span> <span style="color:#111">get_dots</span><span style="color:#111">(</span><span style="color:#f92672">&amp;</span><span style="color:#111">word</span><span style="color:#111">,</span> <span style="color:#111">n</span><span style="color:#111">))</span>
+<span style="color:#111">}</span>
+
+<span style="color:#00a8c8">fn</span> <span style="color:#75af00">get_dots</span><span style="color:#111">(</span><span style="color:#111">word</span>: <span style="color:#00a8c8">&amp;</span><span style="color:#00a8c8">str</span><span style="color:#111">,</span> <span style="color:#111">n</span>: <span style="color:#00a8c8">usize</span><span style="color:#111">)</span> -&gt; <span style="color:#111">String</span> <span style="color:#111">{</span>
+    <span style="color:#00a8c8">let</span> <span style="color:#00a8c8">mut</span> <span style="color:#111">tmp</span> <span style="color:#f92672">=</span> <span style="color:#111">word</span><span style="color:#111">.</span><span style="color:#111">to_string</span><span style="color:#111">();</span>
+    <span style="color:#111">set_dots</span><span style="color:#111">(</span><span style="color:#f92672">&amp;</span><span style="color:#00a8c8">mut</span> <span style="color:#111">tmp</span><span style="color:#111">,</span> <span style="color:#111">n</span><span style="color:#111">);</span>
+    <span style="color:#111">tmp</span>
+<span style="color:#111">}</span>
+
+<span style="color:#00a8c8">fn</span> <span style="color:#75af00">set_dots</span><span style="color:#111">(</span><span style="color:#111">word</span>: <span style="color:#00a8c8">&amp;</span><span style="color:#75af00">mut</span> <span style="color:#00a8c8">str</span><span style="color:#111">,</span> <span style="color:#111">n</span>: <span style="color:#00a8c8">usize</span><span style="color:#111">)</span> <span style="color:#111">{</span>
+    <span style="color:#111">assert</span><span style="color:#f92672">!</span><span style="color:#111">(</span><span style="color:#111">word</span><span style="color:#111">.</span><span style="color:#111">is_ascii</span><span style="color:#111">(),</span> <span style="color:#d88200">&#34;Not ascii, cant do dots&#34;</span><span style="color:#111">);</span>
+    <span style="color:#00a8c8">for</span> <span style="color:#111">i</span> <span style="color:#00a8c8">in</span> <span style="color:#ae81ff">0</span><span style="color:#111">..</span><span style="color:#111">word</span><span style="color:#111">.</span><span style="color:#111">len</span><span style="color:#111">()</span> <span style="color:#111">{</span>
+        <span style="color:#00a8c8">if</span> <span style="color:#111">((</span><span style="color:#111">n</span> <span style="color:#f92672">&gt;&gt;</span> <span style="color:#111">i</span><span style="color:#111">)</span> <span style="color:#f92672">&amp;</span> <span style="color:#ae81ff">1</span><span style="color:#111">)</span> <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span> <span style="color:#111">{</span>
+            <span style="color:#75715e">// Safety: The thing is all ascii, so we
+</span><span style="color:#75715e"></span>            <span style="color:#75715e">//         will maintain utf-8 invariance
+</span><span style="color:#75715e"></span>            <span style="color:#00a8c8">unsafe</span> <span style="color:#111">{</span>
+                <span style="color:#111">word</span><span style="color:#111">.</span><span style="color:#111">as_bytes_mut</span><span style="color:#111">()[</span><span style="color:#111">i</span><span style="color:#111">]</span> <span style="color:#f92672">=</span> <span style="color:#111">DOT</span><span style="color:#111">;</span>
+            <span style="color:#111">}</span>
+        <span style="color:#111">}</span>
+    <span style="color:#111">}</span>
+<span style="color:#111">}</span>
+</code></pre></div><p>The dotification is surprisingly complex. We use <code>set_dots</code> to use a number to
+encode which characters are to be turned to dots. Changing them actually
+requires <code>unsafe</code> as UTF-8 means if we tried to do it in the middle of an emoji
+or other multi-byte character, we&rsquo;d end up with invalid unicode, so we use an
+assert to ensure this doesn&rsquo;t happen.</p>
+<p><code>get_dots</code> is a simple wrapper around <code>set_dots</code> that deals with the string allocation.</p>
+<p><code>dotify</code> creates an iterator such that <code>^</code> and <code>$</code> are preserved and dotifys the rest</p>
+<div class="highlight"><pre style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#00a8c8">fn</span> <span style="color:#75af00">subparts</span><span style="color:#111">(</span><span style="color:#111">word</span>: <span style="color:#111">String</span><span style="color:#111">)</span> -&gt; <span style="color:#75af00">impl</span> <span style="color:#111">Iterator</span><span style="color:#f92672">&lt;</span><span style="color:#111">Item</span> <span style="color:#f92672">=</span> <span style="color:#111">String</span><span style="color:#f92672">&gt;</span> <span style="color:#111">{</span>
+    <span style="color:#00a8c8">let</span> <span style="color:#111">len</span> <span style="color:#f92672">=</span> <span style="color:#111">word</span><span style="color:#111">.</span><span style="color:#111">len</span><span style="color:#111">();</span>
+    <span style="color:#111">(</span><span style="color:#ae81ff">0</span><span style="color:#111">..</span><span style="color:#f92672">=</span><span style="color:#111">len</span><span style="color:#111">)</span>
+        <span style="color:#111">.</span><span style="color:#111">cartesian_product</span><span style="color:#111">(</span><span style="color:#ae81ff">1</span><span style="color:#111">..</span><span style="color:#ae81ff">5</span><span style="color:#111">)</span>
+        <span style="color:#111">.</span><span style="color:#111">map</span><span style="color:#111">(</span><span style="color:#f92672">|</span><span style="color:#111">(</span><span style="color:#111">start</span><span style="color:#111">,</span> <span style="color:#111">offset</span><span style="color:#111">)</span><span style="color:#f92672">|</span> <span style="color:#111">(</span><span style="color:#111">start</span><span style="color:#111">,</span> <span style="color:#111">start</span> <span style="color:#f92672">+</span> <span style="color:#111">offset</span><span style="color:#111">))</span>
+        <span style="color:#111">.</span><span style="color:#111">filter</span><span style="color:#111">(</span><span style="color:#00a8c8">move</span> <span style="color:#f92672">|</span><span style="color:#111">(</span><span style="color:#111">_</span><span style="color:#111">,</span> <span style="color:#111">end</span><span style="color:#111">)</span><span style="color:#f92672">|</span> <span style="color:#f92672">*</span><span style="color:#111">end</span> <span style="color:#f92672">&lt;=</span> <span style="color:#111">len</span><span style="color:#111">)</span>
+        <span style="color:#111">.</span><span style="color:#111">map</span><span style="color:#111">(</span><span style="color:#00a8c8">move</span> <span style="color:#f92672">|</span><span style="color:#111">(</span><span style="color:#111">start</span><span style="color:#111">,</span> <span style="color:#111">end</span><span style="color:#111">)</span><span style="color:#f92672">|</span> <span style="color:#111">word</span><span style="color:#111">[</span><span style="color:#111">start</span><span style="color:#111">..</span><span style="color:#111">end</span><span style="color:#111">].</span><span style="color:#111">to_owned</span><span style="color:#111">())</span>
+<span style="color:#111">}</span>
+
+<span style="color:#00a8c8">fn</span> <span style="color:#75af00">matches</span><span style="color:#f92672">&lt;</span><span style="color:#75af00">&#39;a</span><span style="color:#f92672">&gt;</span><span style="color:#111">(</span>
+    <span style="color:#111">r</span>: <span style="color:#00a8c8">&amp;</span><span style="color:#111">String</span><span style="color:#111">,</span>
+    <span style="color:#111">strs</span>: <span style="color:#75af00">impl</span> <span style="color:#111">Iterator</span><span style="color:#f92672">&lt;</span><span style="color:#111">Item</span> <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span><span style="color:#75af00">&#39;a</span> <span style="color:#00a8c8">str</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">+</span> <span style="color:#75af00">&#39;a</span><span style="color:#111">,</span>
+<span style="color:#111">)</span> -&gt; <span style="color:#75af00">impl</span> <span style="color:#111">Iterator</span><span style="color:#f92672">&lt;</span><span style="color:#111">Item</span> <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span><span style="color:#75af00">&#39;a</span> <span style="color:#00a8c8">str</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">+</span> <span style="color:#75af00">&#39;a</span> <span style="color:#111">{</span>
+    <span style="color:#00a8c8">let</span> <span style="color:#111">re</span> <span style="color:#f92672">=</span> <span style="color:#111">Regex</span>::<span style="color:#111">new</span><span style="color:#111">(</span><span style="color:#111">r</span><span style="color:#111">).</span><span style="color:#111">unwrap</span><span style="color:#111">();</span>
+    <span style="color:#111">strs</span><span style="color:#111">.</span><span style="color:#111">filter</span><span style="color:#111">(</span><span style="color:#00a8c8">move</span> <span style="color:#f92672">|</span><span style="color:#111">s</span><span style="color:#f92672">|</span> <span style="color:#111">re</span><span style="color:#111">.</span><span style="color:#111">is_match</span><span style="color:#111">(</span><span style="color:#111">s</span><span style="color:#111">))</span>
+<span style="color:#111">}</span>
+</code></pre></div><p>Finally a few helper methods.</p>
+<p>If your not sure what any of these these functions do, <a href="https://play.rust-lang.org/?version=stable&amp;mode=release&amp;edition=2018&amp;gist=e1f00ce619be19cb8da4b2b57268d9a5">the tests are here</a>.</p>
+<p>This code is not well optimized. Regexes are being compiled only to be used once
+and theirs a lot of string allocation. However untuned rust code has
+<a href="https://youtu.be/HgtRAbE1nBM?t=2573">been</a>
+<a href="http://dtrace.org/blogs/bmc/2018/09/18/falling-in-love-with-rust/">known</a> to
+beat c, so I should beat norvig&rsquo;s python, right?</p>
+<pre><code>$ time ./target/release/v1_naive
+a.a|i..n|j|li|a.t|a..i|bu|oo|tr|ay.|n.e|r.e$|ls|po|lev
+
+real 2.395320
+user 2.388920
+sys 0.000000
+$ time python norvig.py 
+53 a.a|a..i|j|oo|a.t|i..o|i..n|bu|n.e|ay.|r.e$|tr|po|v.l
+
+real 1.181500
+user 1.175260
+sys 0.000000
+</code></pre><p><sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup></p>
+<p>How could this have happened. Well Norvig&rsquo;s code (probably) spends most of it&rsquo;s
+time not in interpreting python but in regex and set operators. Both of these
+are written in c. So the performance will actually be competitive.</p>
+<h2 id="cheep-tricks">Cheep tricks</h2>
+<p>Going throught <a href="https://deterministic.space/high-performance-rust.html">the cheep tricks</a>, we add</p>
+<div class="highlight"><pre style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-toml" data-lang="toml"><span style="color:#111">[</span><span style="color:#75af00">profile</span><span style="color:#111">.</span><span style="color:#75af00">release</span><span style="color:#111">]</span>
+<span style="color:#75af00">lto</span> <span style="color:#111">=</span> <span style="color:#d88200">&#34;fat&#34;</span>
+<span style="color:#75af00">codegen</span><span style="color:#960050;background-color:#1e0010">-</span><span style="color:#75af00">units</span> <span style="color:#111">=</span> <span style="color:#ae81ff">1</span>
+</code></pre></div><p>and build with <code>RUSTFLAGS=&quot;-C target-cpu=native&quot; cargo build --release</code></p>
+<pre><code>$ time ./target/release/v3_cheep_tricks
+a.a|i..n|j|li|a.t|a..i|ru|oo|bu|n.e|ay.|r.e$|ls|po|lev
+
+real 2.289380
+user 2.283400
+sys 0.000000
+</code></pre><p><sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>
+Modest gains, but this isn&rsquo;t what we&rsquo;re looking for.</p>
+<h2 id="profiling">Profiling</h2>
+<p>Given none of the cheep tricks have worked, we need to actually know what we&rsquo;re
+spending time on. Running <a href="https://github.com/flamegraph-rs/flamegraph"><code>cargo flamegraph</code></a> we get:</p>
+<p><a href="/img/rust_regex_fg1.svg"><img src="/img/rust_regex_fg1.svg" alt="A flamegraph, most of the time is spent inRegex::new"></a></p>
+<p>(You can click on the image to view the full interactive SVG.)</p>
+<p>Most of the time is going to building the regex (<code>Regex::new</code>), but with some time going to <code>is_match</code> and <code>drop_in_place</code>.</p>
+<p>Let&rsquo;s look at regex compilation. Regex strings are
+<a href="https://github.com/rust-lang/regex/blob/master/HACKING.md#compilation">&ldquo;compiled&rdquo;</a>
+to an internal representation that allows matching.  Givin this may be the only
+application (<a href="https://github.com/aDotInTheVoid/meta-regex-golf/issues/new">let me
+know</a> if it isn&rsquo;t)
+that depends on compiling regex&rsquo;s fast, the regex crate is designed (much like
+rust itself) to do lots of work at compile time to avoid doing work at runtime.
+In fact, in the performance guide, the first thing it tells you is <a href="https://github.com/rust-lang/regex/blob/adb4aa3ce437ba1978af540071f85e302cced3ec/PERFORMANCE.md#thou-shalt-not-compile-regular-expressions-in-a-loop">avoid
+compiling
+regexes</a>.</p>
+<p>Therefor what needs to happen is when a <code>String</code> for a regex part is generated
+in <code>regex_parts</code>, it is stored with the <code>regex::Regex</code> it represents instead of
+creating that <code>regex::Regex</code> every time.</p>
+<h2 id="caching-regexes">Caching Regexes</h2>
+<p>Let&rsquo;s make a struct to represent a Part of a regex (eg <code>i..n</code>).</p>
+<div class="highlight"><pre style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#75715e">#[derive(Clone)]</span>
+<span style="color:#00a8c8">struct</span> <span style="color:#75af00">Part</span> <span style="color:#111">{</span>
+    <span style="color:#111">string</span>: <span style="color:#111">String</span><span style="color:#111">,</span>
+    <span style="color:#111">reg</span>: <span style="color:#75af00">Regex</span><span style="color:#111">,</span>
+<span style="color:#111">}</span>
+</code></pre></div><p>Because <code>regex::Regex</code> doesn&rsquo;t implement <code>Hash</code> or <code>Eq</code> (why would it?), we need
+to do that ourselves. Fortunately we can use the string to do that as every
+string uniquely identifies a regex.</p>
+<div class="highlight"><pre style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#00a8c8">impl</span> <span style="color:#111">Hash</span> <span style="color:#00a8c8">for</span> <span style="color:#111">Part</span> <span style="color:#111">{</span>
+    <span style="color:#00a8c8">fn</span> <span style="color:#75af00">hash</span><span style="color:#f92672">&lt;</span><span style="color:#111">H</span>: <span style="color:#75af00">Hasher</span><span style="color:#f92672">&gt;</span><span style="color:#111">(</span><span style="color:#f92672">&amp;</span><span style="color:#111">self</span><span style="color:#111">,</span> <span style="color:#111">state</span>: <span style="color:#00a8c8">&amp;</span><span style="color:#75af00">mut</span> <span style="color:#111">H</span><span style="color:#111">)</span> <span style="color:#111">{</span>
+        <span style="color:#111">self</span><span style="color:#111">.</span><span style="color:#111">string</span><span style="color:#111">.</span><span style="color:#111">hash</span><span style="color:#111">(</span><span style="color:#111">state</span><span style="color:#111">);</span>
+    <span style="color:#111">}</span>
+<span style="color:#111">}</span>
+<span style="color:#00a8c8">impl</span> <span style="color:#111">PartialEq</span> <span style="color:#00a8c8">for</span> <span style="color:#111">Part</span> <span style="color:#111">{</span>
+    <span style="color:#00a8c8">fn</span> <span style="color:#75af00">eq</span><span style="color:#111">(</span><span style="color:#f92672">&amp;</span><span style="color:#111">self</span><span style="color:#111">,</span> <span style="color:#111">other</span>: <span style="color:#00a8c8">&amp;</span><span style="color:#75af00">Self</span><span style="color:#111">)</span> -&gt; <span style="color:#00a8c8">bool</span> <span style="color:#111">{</span>
+        <span style="color:#111">self</span><span style="color:#111">.</span><span style="color:#111">string</span> <span style="color:#f92672">==</span> <span style="color:#111">other</span><span style="color:#111">.</span><span style="color:#111">string</span>
+    <span style="color:#111">}</span>
+<span style="color:#111">}</span>
+<span style="color:#00a8c8">impl</span> <span style="color:#111">Eq</span> <span style="color:#00a8c8">for</span> <span style="color:#111">Part</span> <span style="color:#111">{}</span>
+
+<span style="color:#00a8c8">impl</span> <span style="color:#111">Part</span> <span style="color:#111">{</span>
+    <span style="color:#00a8c8">fn</span> <span style="color:#75af00">new</span><span style="color:#111">(</span><span style="color:#111">string</span>: <span style="color:#111">String</span><span style="color:#111">)</span> -&gt; <span style="color:#75af00">Self</span> <span style="color:#111">{</span>
+        <span style="color:#00a8c8">let</span> <span style="color:#111">reg</span> <span style="color:#f92672">=</span> <span style="color:#111">Regex</span>::<span style="color:#111">new</span><span style="color:#111">(</span><span style="color:#f92672">&amp;</span><span style="color:#111">string</span><span style="color:#111">).</span><span style="color:#111">unwrap</span><span style="color:#111">();</span>
+        <span style="color:#111">Self</span> <span style="color:#111">{</span> <span style="color:#111">reg</span><span style="color:#111">,</span> <span style="color:#111">string</span> <span style="color:#111">}</span>
+    <span style="color:#111">}</span>
+<span style="color:#111">}</span>
+</code></pre></div><p>Now to rewrite the rest of the code. First we add <code>.map(Part::new)</code> to
+<code>regex_parts</code> to generate the regex their. Every regex gets run at least once
+(in <code>max_by_key</code>) so we don&rsquo;t have to worry about lazily compiling them. Next we
+change the function signatures and replace the calls with the regex parts. As
+most of them will access the <code>string</code> field, but <code>Regex::new(...).unwrap()</code> can
+become <code>reg</code>.</p>
+<p>For example, <code>matches</code> becomes:</p>
+<div class="highlight"><pre style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#00a8c8">fn</span> <span style="color:#75af00">matches</span><span style="color:#f92672">&lt;</span><span style="color:#75af00">&#39;a</span><span style="color:#f92672">&gt;</span><span style="color:#111">(</span>
+    <span style="color:#111">r</span>: <span style="color:#00a8c8">&amp;</span><span style="color:#75af00">&#39;a</span> <span style="color:#111">Part</span><span style="color:#111">,</span>
+    <span style="color:#111">strs</span>: <span style="color:#75af00">impl</span> <span style="color:#111">Iterator</span><span style="color:#f92672">&lt;</span><span style="color:#111">Item</span> <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span><span style="color:#75af00">&#39;a</span> <span style="color:#00a8c8">str</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">+</span> <span style="color:#75af00">&#39;a</span><span style="color:#111">,</span>
+<span style="color:#111">)</span> -&gt; <span style="color:#75af00">impl</span> <span style="color:#111">Iterator</span><span style="color:#f92672">&lt;</span><span style="color:#111">Item</span> <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span><span style="color:#75af00">&#39;a</span> <span style="color:#00a8c8">str</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">+</span> <span style="color:#75af00">&#39;a</span> <span style="color:#111">{</span>
+    <span style="color:#111">strs</span><span style="color:#111">.</span><span style="color:#111">filter</span><span style="color:#111">(</span><span style="color:#00a8c8">move</span> <span style="color:#f92672">|</span><span style="color:#111">s</span><span style="color:#f92672">|</span> <span style="color:#111">r</span><span style="color:#111">.</span><span style="color:#111">reg</span><span style="color:#111">.</span><span style="color:#111">is_match</span><span style="color:#111">(</span><span style="color:#111">s</span><span style="color:#111">))</span>
+<span style="color:#111">}</span>
+</code></pre></div><p>The only complication was that we had to add <code>#![type_length_limit=&quot;12373190&quot;]</code>. This is because regex_parts returns a iterator so complex it&rsquo;s full type signature is:</p>
+<pre><code>core::iter::adapters::chain::Chain&lt;core::iter::adapters::Map&lt;core::iter::adapters::Map&lt;std::collections::hash::set::Iter&lt;&amp;str&gt;, playground::regex_parts::{{closure}}&gt;, playground::Part::new&gt;, core::iter::adapters::Filter&lt;core::iter::adapters::Map&lt;core::iter::adapters::flatten::FlatMap&lt;core::iter::adapters::flatten::FlatMap&lt;core::iter::adapters::Map&lt;std::collections::hash::set::Iter&lt;&amp;str&gt;, playground::regex_parts::{{closure}}&gt;, core::iter::adapters::Map&lt;core::iter::adapters::Filter&lt;core::iter::adapters::Map&lt;itertools::adaptors::Product&lt;core::ops::range::RangeInclusive&lt;usize&gt;, core::ops::range::Range&lt;usize&gt;&gt;, playground::subparts::{{closure}}&gt;, playground::subparts::{{closure}}&gt;, playground::subparts::{{closure}}&gt;, playground::subparts&gt;, core::iter::adapters::Map&lt;core::iter::adapters::Map&lt;core::ops::range::Range&lt;usize&gt;, playground::dotify::{{closure}}&gt;, playground::dotify::{{closure}}&gt;, playground::dotify&gt;, playground::Part::new&gt;, playground::regex_parts::{{closure}}&gt;&gt;
+</code></pre><p>Has this worked.</p>
+<pre><code>$ time ./target/release/v5_cache_regex
+a.a|i..n|j|oo|a.t|i..o|a..i|bu|tr|ay.|n.e|r.e$|po|vel
+
+real 0.190600
+user 0.180000
+sys 0.007200
+</code></pre><p>Yep, it has. That said <a href="https://nbviewer.jupyter.org/url/norvig.com/ipython/xkcd1313-part2.ipynb#Speedup:--Faster-matches-by-Compiling-Regexes">norvig did this
+too</a>, in his follow up post
+so we should benchmark that one, to be fair.</p>
+<pre><code>$ python norvig_cache.py
+real 0.790220
+user 0.784960
+sys 0.000000
+</code></pre><p>But can we go further? Let&rsquo;s do a flamegraph for this new version and see where we land</p>
+<p><a href="/img/rust_regex_fg3.svg"><img src="/img/rust_regex_fg3.svg" alt=""></a></p>
+<p>Their&rsquo;s three main parts:</p>
+<ul>
+<li><code>core::ptr::drop_in_place</code>: We&rsquo;re using alot of strings, so /(de)?allocations/
+are inevitable. That said, useing an alternative allocator may speed this up.</li>
+<li><code>regex::re_unicode::Regex::new</code> is still about 60% Of the time. However baring
+switching to an alternate regex implementation, I&rsquo;m not sure what more can be
+done. Every regex needs to be compiled.</li>
+<li><code>regex::re_unicode::Regex::new</code> now takes up 21% of the of the time. This is
+much better as it previously only took up 11% so much more of the time is
+actual regex matching.</li>
+</ul>
+<h2 id="alternative-allocations">Alternative Allocations</h2>
+<p>Next we can replace the allocator. Rust makes it very easy to use an alternative
+to the system allocator, such as Jemalloc <sup id="fnref:4"><a href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>:</p>
+<div class="highlight"><pre style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust"><span style="color:#75715e">#[global_allocator]</span>
+<span style="color:#00a8c8">static</span> <span style="color:#111">GLOBAL</span>: <span style="color:#75af00">Jemalloc</span> <span style="color:#f92672">=</span> <span style="color:#111">Jemalloc</span><span style="color:#111">;</span>
+</code></pre></div><pre><code>time ./target/release/v7_jemalloc
+real 0.163220
+user 0.153220
+sys 0.006380
+</code></pre><p>That a roughly 15% speedup just by ditching the system allocator (glibc 2.30-11).</p>
+<p><a href="/img/rust_regex_fg4.svg"><img src="/img/rust_regex_fg4.svg" alt=""></a></p>
+<p>After using jemalloc, the flamegraph looks like this, and their is very little
+time spend allocating. Almost all the time is spend in <code>regex</code> itself, so I
+think that&rsquo;s as far as we can go while keeping this a fair test.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Rust is fast but python can be fast too. While it can be easy to assume that
+with zero cost abstraction&rsquo;s and no garbage collector and no runtime, rust will
+smoke interpreted languages like python and node. <a href="https://youtu.be/GCsxYAxw3JQ?t=1605">This isn&rsquo;t the
+case</a>. Alot of work has gone into cpython
+and v8 optimizations, and they both use c/c++ for things like regex and strings.</p>
+<p>To quote <a href="https://youtu.be/GCsxYAxw3JQ?t=1674">ashley williams (quoting someone else)</a></p>
+<blockquote>
+<p>I just fully expected to rust my way into 50% perf over js. Sometimes you
+forget that v8 is pretty darn fast</p>
+</blockquote>
+<p>This apples equally to python. Rust isn&rsquo;t a silver bullet for speed. Garbage
+collection doesn&rsquo;t automatically mean performance will be bad.
+<a href="https://transitiontech.ca/random/RIIR">RIIR</a> can make things worse. Rust is
+great, but so are other language</p>
+<h2 id="future-work">Future work</h2>
+<p>Several things could still be done</p>
+<h3 id="use-a-common-regex-framework">Use a common regex framework.</h3>
+<p>By using PCRE on both sides, we could eliminate one cause of performance difference.</p>
+<h3 id="use-a-custom-regex-engine">Use a custom regex engine</h3>
+<p>On the other end of the specrum, if the goal is juicing as much speed as
+possible out of playing meta-regex golf, I suspect the way forward will be a
+custom regex engine that is designed for fast compilation and only supports the
+subset of regex used.</p>
+<h3 id="go-over-norvigs-part-2">Go over norvig&rsquo;s part 2</h3>
+<p>Norvig has written a
+<a href="https://nbviewer.jupyter.org/url/norvig.com/ipython/xkcd1313-part2.ipynb#Speedup:--Faster-matches-by-Compiling-Regexes">followup</a>
+to the original post. I have just used it for the cached version, but their are
+also some improvement to the algorithm, both in terms of speed and output
+quality, it would be interesting to port over.</p>
+<h2 id="results-table">Results Table</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Real</th>
+<th>User</th>
+<th>Sys</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>python3 norvig_nocache.py</td>
+<td>1.177380</td>
+<td>1.171280</td>
+<td>0.000000</td>
+</tr>
+<tr>
+<td>python3 norvig_with_cache.py</td>
+<td>0.785040</td>
+<td>0.779820</td>
+<td>0.000000</td>
+</tr>
+<tr>
+<td>out/v1_naive</td>
+<td>2.407900</td>
+<td>2.401880</td>
+<td>0.000000</td>
+</tr>
+<tr>
+<td>out/v2_regex_feats</td>
+<td>2.428660</td>
+<td>2.422040</td>
+<td>0.000000</td>
+</tr>
+<tr>
+<td>out/v3_cheep_tricks</td>
+<td>2.288340</td>
+<td>2.282500</td>
+<td>0.000000</td>
+</tr>
+<tr>
+<td>out/v4_inline_never</td>
+<td>2.281600</td>
+<td>2.275380</td>
+<td>0.000020</td>
+</tr>
+<tr>
+<td>out/v5_cache_regex</td>
+<td>0.190940</td>
+<td>0.181220</td>
+<td>0.006680</td>
+</tr>
+<tr>
+<td>out/v6_regex_feats</td>
+<td>0.221020</td>
+<td>0.213860</td>
+<td>0.001540</td>
+</tr>
+<tr>
+<td>out/v7_jemalloc</td>
+<td>0.169620</td>
+<td>0.155900</td>
+<td>0.006220</td>
+</tr>
+</tbody>
+</table>
+<section class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1" role="doc-endnote">
+<p>Comic licensed under a <a href="http://creativecommons.org/licenses/by-nc/2.5/">Creative Commons Attribution-NonCommercial 2.5 License</a> <a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:2" role="doc-endnote">
+<p>These benchmarks were taken from the average of 500 runs.
+See <a href="https://github.com/aDotInTheVoid/meta-regex-golf">here</a> for the full setup.
+Python 3.7.7 and rustc 1.43.1 were used on Fedora 31 system running
+linux 5.6.7-200 and glibc 2.30-11 with 8GB of RAM and an i7-2700K @ 3.50 GHz <a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:3" role="doc-endnote">
+<p>In case you&rsquo;re woundering where v2 is, it was trying to solve with
+<a href="https://docs.rs/regex/1.3.7/regex/#crate-features">regex features</a>. Every combination
+other than the default seemed to slow it down. This is also what v5 was. v4 was to
+<code>#[inline(never)]</code>, and didn&rsquo;t need to show up in the benchmark. If you really want to see
+them, you can dig through the history in the <a href="https://github.com/aDotInTheVoid/meta-regex-golf/">repo</a> <a href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:4" role="doc-endnote">
+<p>I also tried mimalloc, but is was slower. <a href="#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+</ol>
+</section>
+
+</div>
+
+
+    </main>
+
+    
+      
+    
+  </body>
+</html>
