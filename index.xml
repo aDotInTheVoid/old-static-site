@@ -5,11 +5,7 @@
     <link>https://adotinthevoid.github.io/</link>
     <description>Recent content on Nixon Enraght-Moony</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Wed, 20 May 2020 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="https://adotinthevoid.github.io/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Wed, 20 May 2020 00:00:00 +0000</lastBuildDate><atom:link href="https://adotinthevoid.github.io/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Metaregex: Python can be fast too</title>
       <link>https://adotinthevoid.github.io/posts/2020/05/metaregex-python-can-be-fast-too/</link>
@@ -67,7 +63,7 @@ Syntax highting Syntax Highlighting is done via chroma on server.</description>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>https://adotinthevoid.github.io/theme/</guid>
-      <description>This site runs a modified version of spf13’s hugo port of @mdo&amp;lsquo;s hyde theme for jekyll
+      <description>This site runs a modified version of spf13’s hugo port of @mdo&amp;rsquo;s hyde theme for jekyll
 Modifications made:
  Use \(\KaTeX\) Better date format (Mon, Jan 2, 2006 to January 2, 2006) Have a blog and non blog section  Blog sections have dates, non-blog doesn&amp;rsquo;t Blog uses short list, non-blog doesn&amp;rsquo;t Home page has content, not blog list   No home link in sidebar: The site name above does that Improved Copyright handling: Allow customization of copyright text Add table of contents option Add not_a_list type: This is a list type where the list is actualy a single.</description>
     </item>
