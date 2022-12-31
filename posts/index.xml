@@ -7,11 +7,11 @@
     <generator>Hugo -- gohugo.io</generator>
     <lastBuildDate>Sat, 31 Dec 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://adotinthevoid.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Rustdoc JSON in 2022 and beyond</title>
-      <link>https://adotinthevoid.github.io/posts/2022/12/rustdoc-json-in-2022-and-beyond/</link>
+      <title>Rustdoc JSON in 2022</title>
+      <link>https://adotinthevoid.github.io/posts/2022/12/rustdoc-json-in-2022/</link>
       <pubDate>Sat, 31 Dec 2022 00:00:00 +0000</pubDate>
       
-      <guid>https://adotinthevoid.github.io/posts/2022/12/rustdoc-json-in-2022-and-beyond/</guid>
+      <guid>https://adotinthevoid.github.io/posts/2022/12/rustdoc-json-in-2022/</guid>
       <description>It&amp;rsquo;s that time of year again, when everyone is writing excellent summary articles about what happened this year, and goals for the next one. I figured I should do the same for rustdoc JSON.
 What is rustdoc JSON? If you haven&amp;rsquo;t heard of it yet, rustdoc JSON is an unstable feature for rustdoc that allows rustdoc to output a JSON description of a crates API, as opposed to the stable HTML output.</description>
     </item>
