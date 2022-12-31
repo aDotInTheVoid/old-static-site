@@ -159,7 +159,7 @@ and the magic of rust&rsquo;s bots will keep you up to date.</li>
 <p>Format version 16, introduced in <a href="https://github.com/rust-lang/rust/pull/99287/">#99287</a> merits its own discussion, as it was a much deeper change to how the format represents rust code, and fixed a lot more bugs.</p>
 <p>The root of the problem is that each new file in rust is its own module
 <sup id="fnref:4"><a href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>. This means that if each type went in its own file (which was a <code>pub mod</code>), then the type name is duplicated with the module name.</p>
-<p>Eg if theirs a library called <code>collections</code> that&rsquo;s laid out like</p>
+<p>Eg if there&rsquo;s a library called <code>collections</code> that&rsquo;s laid out like</p>
 <pre tabindex="0"><code>collections/
 ├── Cargo.lock
 ├── Cargo.toml
@@ -353,7 +353,7 @@ Valerian Liehr, Luca Palmieri, Martin Nordholts, Matthias Krüger , Michael
 Goulet, Michael Howell, Noah Lev, Predrag Gruevski, QuietMisdreavus, Rune Tynan,
 Tyler Mandry, and Urgau for their invaluable contributions.</p>
 <p>Hopefully next year we can continue to improve at this solid pace. My main goal
-is to impove the way cross-crate ID lookup works, but theirs also more work to
+is to impove the way cross-crate ID lookup works, but there&rsquo;s also more work to
 be done to fix more bugs, further flesh out the test suite, and increase
 performance. I&rsquo;ll write more about these in a future post.</p>
 <p>If you want to hear about that when it comes out, or just generally want to be
@@ -365,7 +365,7 @@ If you have questions or comments on this post, I&rsquo;d love to hear them on
 <hr>
 <ol>
 <li id="fn:1">
-<p>At the root level of the output, theirs a field called
+<p>At the root level of the output, there&rsquo;s a field called
 <code>format_version</code>, which gets increased by 1 every time we change the
 definition of the types that get serialized.&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
