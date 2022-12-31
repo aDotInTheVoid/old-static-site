@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" >
+
+<head>
+  <link href="https://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.102.3" />
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Rustdoc JSON in 2022 and beyond &middot; Nixon Enraght-Moony</title>
+  <meta name="description" content="" />
+
+  
+  <link type="text/css" rel="stylesheet" href="https://adotinthevoid.github.io/css/print.css" media="print">
+  <link type="text/css" rel="stylesheet" href="https://adotinthevoid.github.io/css/poole.css">
+  <link type="text/css" rel="stylesheet" href="https://adotinthevoid.github.io/css/syntax.css">
+  <link type="text/css" rel="stylesheet" href="https://adotinthevoid.github.io/css/hyde.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Abril+Fatface|PT+Sans:400,400i,700">
+
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
+  
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css"
+    integrity="sha384-zB1R0rpPzHqg7Kpt0Aljp8JPLqbXI3bhnPWROx27a9N0Ll6ZP/+DiW/UqRcLbRjq" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js"
+    integrity="sha384-y23I5Q6l+B6vatafAwxRu/0oK/79VlbSz7Q9aiSZUvyWYIYsd+qj+o24G5ZU2zJz"
+    crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/contrib/auto-render.min.js"
+    integrity="sha384-kWPLUVMOks5AQFrykwIup5lo0m3iMkkHrD0uJ4H5cjeGihAutqP0yW0J6dpFiVkI" crossorigin="anonymous"
+    onload="renderMathInElement(document.body);"></script>
+
+  
+</head>
+
+  <body class="theme-base-0b ">
+  <aside class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      <a href="https://adotinthevoid.github.io/">
+        <h1>Nixon Enraght-Moony</h1>
+      </a>
+      <p class="lead">
+         Rust and other joys 
+      </p>
+    </div>
+
+    <nav>
+      <ul class="sidebar-nav">
+        
+        <li><a href="/posts"> Blog </a></li><li><a href="https://github.com/adotinthevoid/"> Github </a></li><li><a href="https://www.linkedin.com/in/nixon-enraght-moony-b68587187/"> LinkedIn </a></li>
+      </ul>
+    </nav>
+
+    <p>
+      
+        &copy; 2022. <a href=/meta/#copyright>Some Rights Reserved</a>
+      
+    </p>
+  </div>
+</aside>
+
+    <main class="content container">
+    <div class="post">
+  <h1>Rustdoc JSON in 2022 and beyond</h1>
+  <time datetime=2022-12-31T00:00:00Z class="post-date">December 31, 2022</time>
+  
+  <p>It&rsquo;s that time of year again, when everyone
+<a href="https://predr.ag/blog/cargo-semver-checks-today-and-in-2023/">is</a>
+<a href="https://bytecodealliance.org/articles/cranelift-progress-2022">writing</a>
+<a href="https://tweedegolf.nl/en/blog/81/our-year-in-rust">excellent</a>
+<a href="https://llogiq.github.io/2022/12/11/catch22.html">summary</a>
+<a href="https://www.npopov.com/2022/12/20/This-year-in-LLVM-2022.html">articles</a>
+<a href="https://blog.yoshuawuyts.com/rust-2023/">about</a>
+<a href="https://www.youtube.com/watch?v=OuSiuySr6_Q">what</a>
+<a href="https://cohost.org/lcnr/post/690887-rust-in-2023">happened</a>
+<a href="https://slint-ui.com/blog/2022-in-review.html">this</a>
+year, and goals for the next one. I figured I should do the same for rustdoc JSON.</p>
+<h2 id="what-is-rustdoc-json">What is rustdoc JSON?</h2>
+<p>If you haven&rsquo;t heard of it yet, rustdoc JSON is an unstable feature for rustdoc
+that allows rustdoc to output a JSON description of a crates API, as opposed to
+the stable HTML output.</p>
+<p>This allows tools to be written that reason about an API without them having to interface directly
+with the (even more unstable) rustc APIs, and that benefit from all the processing and cleanup that
+rustdoc does.</p>
+<h2 id="format-changes">Format Changes</h2>
+<p>The biggest user-facing change has been the number of changes to the JSON Format itself.
+Version <sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup> 11 to 23 were released this year <sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup>.</p>
+<ol start="11">
+<li><a href="https://github.com/rust-lang/rust/pull/94137/">#94137</a>: Clean up the <code>Header</code> struct by:
+<ul>
+<li>Making <code>ABI</code> an enum, instead of being stringly typed.</li>
+<li>Replace <code>HashSet&lt;Qualifiers&gt;</code> with 3 bools (<code>const_</code>, <code>unsafe_</code>, and <code>async_</code>).</li>
+<li>Merge <code>ABI</code> field into <code>Header</code>, as they always occur together.</li>
+</ul>
+</li>
+<li><a href="https://github.com/rust-lang/rust/pull/94009/">#94009</a>: Support GATs.</li>
+<li><a href="https://github.com/rust-lang/rust/pull/94150/">#94150</a>: Report whether a generic type bound is <code>synthetic</code> (generated from <code>impl Trait</code> in argument position).</li>
+<li><a href="https://github.com/rust-lang/rust/pull/94921/">#94921</a>: Make names more consistent:
+<ul>
+<li>Consistently use <code>type_</code> over <code>ty</code>.</li>
+<li>Have <code>Trait</code> call it <code>implementations</code>, (not <code>implementors</code>), because the
+Id&rsquo;s are the <code>impl</code> blocks, not the types that impl the trait.</li>
+</ul>
+</li>
+<li><a href="https://github.com/rust-lang/rust/pull/96647/">#96647</a>: Report HRTBs on
+where predicates.</li>
+<li><a href="https://github.com/rust-lang/rust/pull/99287/">#99287</a>: This is a larger
+structural change, that will be discussed next. It&rsquo;s also a format change
+because it added the <code>is_stripped</code> field to <code>Module</code>.</li>
+<li><a href="https://github.com/rust-lang/rust/pull/99787/">#99787</a>: Add <code>dyn Trait</code> as
+a separate variant to the <code>Type</code> enum. This allows HRTBs to be reported, and
+is also more principled as it doesn&rsquo;t use <code>Type::ResolvedPath</code> for both
+concrete types (struct, enum, union) and dyn traits.</li>
+<li><a href="https://github.com/rust-lang/rust/pull/100335/">#100335</a>: Refer to traits
+directly with a <code>Path</code> struct, instead of using <code>Type::ResolvedPath</code>.</li>
+<li><a href="https://github.com/rust-lang/rust/pull/101386/">#101386</a>: Report the
+<code>discriminant</code> of enum variants. <sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup></li>
+<li><a href="https://github.com/rust-lang/rust/pull/101462/">#101462</a>: Change how fields
+in enum variants are stored, to better support ordering and
+<code>#[doc(hidden)]</code>.</li>
+<li><a href="https://github.com/rust-lang/rust/pull/101521/">#101521</a>: Store a <code>Struct</code>&rsquo;s
+<code>fields</code> inside the <code>StructKind</code> enum, to better support ordering and
+<code>#[doc(hidden)]</code>.</li>
+<li><a href="https://github.com/rust-lang/rust/pull/102321/">#102321</a>: Add <code>impls</code> to
+<code>Primitive</code>s.</li>
+<li><a href="https://github.com/rust-lang/rust/pull/104499/">#104499</a>: Use Function
+everywhere and remove Method</li>
+</ol>
+<p>While doing this many changes (on average about 2 a month), may seem disruptive,
+there are many things that make it less of a burden for users:</p>
+<ol>
+<li>Version numbering: Because each version increase changes a constant. This
+makes error reporting much friendlier. <a href="https://github.com/awslabs/cargo-check-external-types/blob/04ee5b72026bcd73292099904744184590f4e86d/src/cargo.rs#L73-L77">For
+example</a>
+<code>cargo-check-external-types</code> first attempts to deserialize just the format
+version, and bails if that doesn&rsquo;t match. This means the user receives an
+error about the version of nightly being wrong, which is much more useful and
+actionable than an error about a missing or unknown JSON field.</li>
+<li>JSON&rsquo;s inherent flexibility: Because of how <code>serde_json</code> works, adding a
+field won&rsquo;t break old code, nor will removing an enum variant. This means
+that many of the smaller changes may not actually require users to update.</li>
+<li>Automatically notifying users: Maintainers of tools that consume rustdoc JSON
+can be automatically notified when a change to the format is proposed. In some
+cases, this has led to fixes to tools being written before the PR to rust has
+landed (eg
+<a href="https://github.com/Enselic/cargo-public-api/pull/95">Enselic/cargo-public-api#95</a>
+and <a href="https://github.com/rust-lang/rust/pull/100335">#100335</a>). If you want to
+get an early warning for changes, add yourself to <a href="https://github.com/rust-lang/rust/blob/7c991868c60a4afc1ee6334b912ea96061a2c98d/triagebot.toml#L404-L415">this
+list</a>,
+and the magic of rust&rsquo;s bots will keep you up to date.</li>
+</ol>
+<h2 id="big-change-dont-inline">Big Change: Don&rsquo;t inline</h2>
+<p>Format version 16, introduced in <a href="https://github.com/rust-lang/rust/pull/99287/">#99287</a> merits its own discussion, as it was a much deeper change to how the format represents rust code, and fixed a lot more bugs.</p>
+<p>The root of the problem is that each new file in rust is its own module
+<sup id="fnref:4"><a href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>. This means that if each type went in its own file (which was a <code>pub mod</code>), then the type name is duplicated with the module name.</p>
+<p>Eg if theirs a library called <code>collections</code> that&rsquo;s laid out like</p>
+<pre tabindex="0"><code>collections/
+├── Cargo.lock
+├── Cargo.toml
+└── src
+    ├── lib.rs
+    ├── list.rs
+    ├── map.rs
+    └── set.rs
+</code></pre><p>And written like</p>
+<div class="highlight"><pre tabindex="0" style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#75715e">// collections/src/lib.rs
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">mod</span> <span style="color:#111">list</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">mod</span> <span style="color:#111">set</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">mod</span> <span style="color:#111">map</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// collections/src/list.rs
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">struct</span> <span style="color:#75af00">List</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// collections/src/set.rs
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">struct</span> <span style="color:#75af00">Set</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// collections/src/map.rs
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">struct</span> <span style="color:#75af00">Map</span><span style="color:#111">;</span>
+</span></span></code></pre></div><p>Then users of the module see the paths like <code>collections::list::List</code>, which
+needlessly duplicates &ldquo;list&rdquo;. To avoid this, code like this tends to get
+written as</p>
+<div class="highlight"><pre tabindex="0" style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#75715e">// collections/src/lib.rs
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#00a8c8">mod</span> <span style="color:#111">list</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#00a8c8">mod</span> <span style="color:#111">set</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#00a8c8">mod</span> <span style="color:#111">map</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">use</span> <span style="color:#111">list</span>::<span style="color:#111">List</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">use</span> <span style="color:#111">set</span>::<span style="color:#111">Set</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">use</span> <span style="color:#111">map</span>::<span style="color:#111">Map</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// collections/src/list.rs
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">struct</span> <span style="color:#75af00">List</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// collections/src/set.rs
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">struct</span> <span style="color:#75af00">Set</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// collections/src/map.rs
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">struct</span> <span style="color:#75af00">Map</span><span style="color:#111">;</span>
+</span></span></code></pre></div><p>And the user now sees <code>List</code> as  <code>collections::List</code>, which is much nicer. It is as if the library author instead just wrote</p>
+<div class="highlight"><pre tabindex="0" style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#75715e">// collections/src/lib.rs
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">struct</span> <span style="color:#75af00">List</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">struct</span> <span style="color:#75af00">Set</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">struct</span> <span style="color:#75af00">Map</span><span style="color:#111">;</span>
+</span></span></code></pre></div><p>But also allows the separate types to be in their own files, which is much nicer for the library author.</p>
+<p>Rustdoc goes to a lot of effort to make the code with private <code>mod</code>s and <code>pub use</code>s look like it was all written in one file. In particular it sometimes
+&ldquo;inline&quot;s items into the locations that they are <code>use</code>d, by replacing a
+<code>pub use</code> of an item with the item being used.</p>
+<p>While this is great for the HTML output, it caused boundless problems for JSON. The most
+canonical example is</p>
+<div class="highlight"><pre tabindex="0" style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#00a8c8">mod</span> <span style="color:#111">style</span> <span style="color:#111">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">struct</span> <span style="color:#75af00">Color</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#111">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">use</span> <span style="color:#111">style</span>::<span style="color:#111">Color</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">use</span> <span style="color:#111">style</span>::<span style="color:#111">Color</span> <span style="color:#00a8c8">as</span> <span style="color:#111">Colour</span><span style="color:#111">;</span>
+</span></span></code></pre></div><p><a href="https://docs.rs/ansi_term/0.12.1/ansi_term/index.html#enums">In HTML Output</a>,
+both <code>Color</code> and <code>Colour</code> are created as separate pages, with no indication that
+they are the same item. In fact, it is the same result as if</p>
+<div class="highlight"><pre tabindex="0" style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">struct</span> <span style="color:#75af00">Color</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">struct</span> <span style="color:#75af00">Colour</span><span style="color:#111">;</span>
+</span></span></code></pre></div><p>was written.</p>
+<p>In JSON this would crash, as two different items were created with the same ID, triggering  an assertion failure.</p>
+<p>The fix for this in JSON is to not inline, and instead report the root module as
+having two items, both of which are imports of the same struct item. The struct
+item isn&rsquo;t a member of any module, and is only accessible via the imports. While
+this would be an unacceptable UI issue for HTML, in JSON it&rsquo;s better to report
+the true nature of the code than to try to clean it up with inlines.</p>
+<p>Changing this fixed a major source of issues for rustdoc JSON, and make the
+output far less likely to ICE.</p>
+<h2 id="package-std-docs">Package std docs</h2>
+<p>Another nice user-facing change this year was including the docs for <code>std</code> (and
+friends) as a rustup component. Because <code>std</code> is special in that it isn&rsquo;t built
+like normal dependencies, but is magically made available by cargo and rustc, its
+JSON <sup id="fnref:5"><a href="#fn:5" class="footnote-ref" role="doc-noteref">5</a></sup> docs can&rsquo;t be produced by cargo like they can for normal
+dependencies. Therefore they need to be shipped  by rustup.</p>
+<ul>
+<li><a href="https://github.com/rust-lang/rust/pull/101799/">#101799</a>: Add <code>rust-json-docs</code> to <code>bootstrap</code></li>
+<li><a href="https://github.com/rust-lang/rust/pull/102042/">#102042</a>: Rename to <code>rust-docs-json</code> and try to add to rustup build-manifest</li>
+<li><a href="https://github.com/rust-lang/rust/pull/102241/">#102241</a>: Fix build-manifest.</li>
+<li><a href="https://github.com/rust-lang/rust/pull/102807/">#102807</a>: Add documentation to the Unstable Features section of the rustdoc book.</li>
+<li><a href="https://github.com/rust-lang/rust/pull/104887/">#104887</a>: Fix <code>./x doc library/core/ --json</code> panicking if HTML docs weren&rsquo;t built.</li>
+</ul>
+<p>Making this work took several attempts, but now that this is all done, anyone
+can run <code>rustup component add --toolchain nightly rust-docs-json</code> to get the
+docs for <code>std</code>, <code>alloc</code>, <code>core</code>, <code>test</code>, and <code>proc_macro</code> in the
+<code>share/doc/rust/json/</code> directory of the rustup toolchain directory, and
+automatically kept up to date with the nightly toolchain by rustup.</p>
+<h2 id="test-tool-improvements">Test tool improvements</h2>
+<p>While these were the big user-facing improvements, there were also many internal
+improvements, particularly around the test tooling.</p>
+<p>Rustdoc JSON is currently tested with two tools. The first, <code>jsondocck</code> reads
+comments from the files which contain assertions about the JSON output, and
+checks that the output matches the assertions. The assertions are written in
+<a href="https://github.com/json-path/JsonPath">JsonPath</a>, and let you check that the
+output has (and doesn&rsquo;t have) the values that you expect.</p>
+<p>Eg <a href="https://github.com/rust-lang/rust/blob/bbdca4c28fd9b57212cb3316ff4ffb1529affcbe/src/test/rustdoc-json/reexport/reexport_method_from_private_module.rs"><code>src/test/rustdoc-json/reexport/reexport_method_from_private_module.rs</code></a>
+currently looks like</p>
+<div class="highlight"><pre tabindex="0" style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#75715e">// @set impl_S = &#34;$.index[*][?(@.docs==&#39;impl S&#39;)].id&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// @has &#34;$.index[*][?(@.name==&#39;S&#39;)].inner.impls[*]&#34; $impl_S
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// @set is_present = &#34;$.index[*][?(@.name==&#39;is_present&#39;)].id&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// @is &#34;$.index[*][?(@.docs==&#39;impl S&#39;)].inner.items[*]&#34; $is_present
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// @!has &#34;$.index[*][?(@.name==&#39;hidden_impl&#39;)]&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// @!has &#34;$.index[*][?(@.name==&#39;hidden_fn&#39;)]&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a8c8">mod</span> <span style="color:#111">private_mod</span> <span style="color:#111">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">struct</span> <span style="color:#75af00">S</span><span style="color:#111">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#d88200">/// impl S
+</span></span></span><span style="display:flex;"><span><span style="color:#d88200"></span>    <span style="color:#00a8c8">impl</span> <span style="color:#111">S</span> <span style="color:#111">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">fn</span> <span style="color:#75af00">is_present</span><span style="color:#111">()</span> <span style="color:#111">{}</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">#[doc(hidden)]</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">fn</span> <span style="color:#75af00">hidden_fn</span><span style="color:#111">()</span> <span style="color:#111">{}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#111">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">#[doc(hidden)]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#00a8c8">impl</span> <span style="color:#111">S</span> <span style="color:#111">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">fn</span> <span style="color:#75af00">hidden_impl</span><span style="color:#111">()</span> <span style="color:#111">{}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#111">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#111">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">use</span> <span style="color:#111">private_mod</span>::<span style="color:#f92672">*</span><span style="color:#111">;</span>
+</span></span></code></pre></div><p>It checks that the struct <code>S</code> has an impl block whose only method is
+<code>is_present</code>, and that <code>hidden_impl</code> and <code>hidden_fn</code> aren&rsquo;t mentioned.</p>
+<p>Over this year, two major changes were landed to <code>jsondocck</code> that make writing these tests much nicer.</p>
+<ol>
+<li><a href="https://github.com/rust-lang/rust/pull/99474/">#99474</a>: Add <code>@ismany</code> to <code>jsondocck</code> to do a setwise comparison.</li>
+<li><a href="https://github.com/rust-lang/rust/pull/100678/">#100678</a>: Don&rsquo;t require specifying file in <code>jsondocck</code>.</li>
+</ol>
+<p>Between them, they mean a test like:</p>
+<div class="highlight"><pre tabindex="0" style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#00a8c8">struct</span> <span style="color:#75af00">S</span>
+</span></span><span style="display:flex;"><span><span style="color:#d88200">/// the impl
+</span></span></span><span style="display:flex;"><span><span style="color:#d88200"></span><span style="color:#00a8c8">impl</span> <span style="color:#111">S</span> <span style="color:#111">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">fn</span> <span style="color:#75af00">foo</span><span style="color:#111">()</span> <span style="color:#111">{}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#00a8c8">pub</span> <span style="color:#00a8c8">fn</span> <span style="color:#75af00">bar</span><span style="color:#111">()</span> <span style="color:#111">{}</span>
+</span></span><span style="display:flex;"><span><span style="color:#111">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// @set foo = name_of_test.rs &#34;$.index[*][?(@.name==&#39;foo&#39;)].id&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// @set bar = - &#34;$.index[*][?(@.name==&#39;foo&#39;)].id&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// @count - &#34;$.index[*][?(@.docs==&#39;the impl&#39;)].inner.items[*]&#34; 2
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// @has   - &#34;$.index[*][?(@.docs==&#39;the impl&#39;)].inner.items[*]&#34; $foo
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// @has   - &#34;$.index[*][?(@.docs==&#39;the impl&#39;)].inner.items[*]&#34; $bar
+</span></span></span></code></pre></div><p>can be rewritten to be</p>
+<div class="highlight"><pre tabindex="0" style="color:#272822;background-color:#fafafa;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#75715e">// @set foo = &#34;$.index[*][?(@.name==&#39;foo&#39;)].id&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// @set bar = &#34;$.index[*][?(@.name==&#39;foo&#39;)].id&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// @ismany &#34;$.index[*][?(@.docs==&#39;the impl&#39;)].inner.items[*]&#34; $foo $bar
+</span></span></span></code></pre></div><p>which is much nicer.</p>
+<p>The other tool that&rsquo;s used is one that checks that all <code>Id</code>s mentioned are
+present in the index (or paths). Originally this was a python script called
+<code>check_missing_items.py</code>, but in
+<a href="https://github.com/rust-lang/rust/pull/101809/">#101809</a>, it was replaced with
+<code>jsondoclint</code>, a rust rewrite. This had many advantages, such as being able to
+use <code>rustdoc-json-types</code> to keep up with format changes, and exhaustively matching
+on kinds, leading to more bugs being caught.</p>
+<p>Interestingly, these bugs all had to be fixed before the tool could be landed,
+and in doing so, <code>check_missing_items.py</code> was fixed so it could catch them if
+they regressed before <code>jsondoclint</code> landed. Despite this, it was still great to
+get rid of it, and replace it with a much more maintainable tool.</p>
+<p>However, with any big rewrite, there were bound to be bugs, and this was no
+exception. In particular, a number of false positives were introduced for code
+patterns not covered by the test suite. They were only unearthed when
+<code>jsondoclint</code> was run on <code>core.json</code>, which isn&rsquo;t currently done in CI, but
+should be. <sup id="fnref:6"><a href="#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup>. These were fixed, and tests were added.</p>
+<ul>
+<li><a href="https://github.com/rust-lang/rust/pull/104879/">#104879</a>: Recognise <code>Typedef</code> as valid kind for <code>Type::ResolvedPath</code></li>
+<li><a href="https://github.com/rust-lang/rust/pull/104924/">#104924</a>: Accept trait alias in places where trait expected.</li>
+<li><a href="https://github.com/rust-lang/rust/pull/104943/">#104943</a>: Accept <code>use</code>ing enum variants and glob <code>use</code>ing enums.</li>
+</ul>
+<h2 id="more-tests">More Tests</h2>
+<p>Another longstanding issue that was partially addressed this year is the
+relative lack of tests. This year the <code>rustdoc-json</code> suite has grown from 26 to
+98 tests <sup id="fnref:7"><a href="#fn:7" class="footnote-ref" role="doc-noteref">7</a></sup>. (For what it&rsquo;s worth, in the same time period, the main
+rustdoc suite <sup id="fnref:8"><a href="#fn:8" class="footnote-ref" role="doc-noteref">8</a></sup> went from 484 to 586 tests.)</p>
+<p>This was addressed in part with dedicated test adding PRs <sup id="fnref:9"><a href="#fn:9" class="footnote-ref" role="doc-noteref">9</a></sup>, but mainly
+due to good habits of always adding tests when changing behaviour that we were
+lucky to inherit from the wider rust project.</p>
+<h2 id="correctness-fixes">Correctness Fixes</h2>
+<p>The final change for 2022 was the vast, vast number of bug fixes <sup id="fnref:10"><a href="#fn:10" class="footnote-ref" role="doc-noteref">10</a></sup>. The
+fact that we were able to make so many fixes is a testament to how many users
+are reporting issues. This is mainly driven by tools that make use rustdoc JSON,
+and in paticular cargo-public-api and cargo-semver-checks have driven a lot more
+eyes towards the code.</p>
+<p>The other major source of bug reports was running with
+<a href="https://github.com/rust-lang/rust/issues/99919">crater</a>, which while it can
+only find assertion failures, makes up for this with sheer volume. One thing I
+want to look into next year is running the <code>jsondoclint</code> tool in crater, so it
+can catch missing IDs, instead of just internal assertions failing.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>2022 was a good year for rustdoc JSON. The format is better; The code is more
+reliable; The tests are more numerous and easier to write; Their are more users
+depending on it. All this was made possible by many people working on and around
+the format. In particular, I&rsquo;d like to thank Alex Kladov, Didrik Nordström,
+Guillaume Gomez, Jacob Hoffman-Andrews, Joseph Ryan, Joshua Nelson, León Orell
+Valerian Liehr, Luca Palmieri, Martin Nordholts, Matthias Krüger , Michael
+Goulet, Michael Howell, Noah Lev, Predrag Gruevski, QuietMisdreavus, Rune Tynan,
+Tyler Mandry, and Urgau for their invaluable contributions.</p>
+<p>Hopefully next year we can continue to improve at this solid pace. My main goal
+is to impove the way cross-crate ID lookup works, but theirs also more work to
+be done to fix more bugs, further flesh out the test suite, and increase
+performance. I&rsquo;ll write more about these in a future post.</p>
+<p>If you want to hear about that when it comes out, or just generally want to be
+notified the next time I have something to share online, you can find me in the
+Fediverse <a href="https://social.treehouse.systems/@nixon">@nixon@treehouse.systems</a>.
+If you have questions or comments on this post, I&rsquo;d love to hear them on
+<a href="https://github.com/aDotInTheVoid/site/issues/1">github</a>.</p>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<p>At the root level of the output, theirs a field called
+<code>format_version</code>, which gets increased by 1 every time we change the
+definition of the types that get serialized.&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:2">
+<p>Assuming nothing gets released on New Year&rsquo;s Eve.&#160;<a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:3">
+<p>It turns out this support isn&rsquo;t great. While writing this post, I
+realised that we only support discriminants on unit variants. This
+restriction has <a href="https://blog.rust-lang.org/2022/12/15/Rust-1.66.0.html#explicit-discriminants-on-enums-with-fields">been
+lifted</a>,
+and I&rsquo;ve filled <a href="https://github.com/rust-lang/rust/issues/106299">an issue</a>
+and intend to fix it in the new year.&#160;<a href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:4">
+<p>Barring the <a href="https://doc.rust-lang.org/stable/std/macro.include.html"><code>include!</code></a> macro, which isn&rsquo;t relevant here.&#160;<a href="#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:5">
+<p>Or HTML for that matter. Rustup has long distributed html docs for <code>std</code> as a component.&#160;<a href="#fnref:5" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:6">
+<p>Hopefully I&rsquo;ll talk more about this in an upcoming post about my goals for rustdoc JSON next year.&#160;<a href="#fnref:6" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:7">
+<p>Measured on
+<a href="https://github.com/rust-lang/rust/tree/bbdca4c28fd9b57212cb3316ff4ffb1529affcbe"><code>bbdca4c</code></a>
+(most recent commit as of the time of writing) and
+<a href="https://github.com/rust-lang/rust/tree/1e6ced353215419f9e838bfbc3d61fe9eb0c004d"><code>1e6ced3</code></a>
+(last change to <code>src/test/rustdoc-json</code> in 2021). Number of tests measured
+with <code>fd -e rs | rg -v &quot;auxiliary&quot; | wc -l</code>.&#160;<a href="#fnref:7" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:8">
+<p>This is only for the <code>src/test/rustdoc/</code> suite, and doesn&rsquo;t
+include ui, gui and std-json. But these are much smaller, and I&rsquo;m trying to
+make a point about the rate of growth and the size of a mature test suite,
+not provide exact numbers.&#160;<a href="#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:9">
+<p><a href="https://github.com/rust-lang/rust/pull/93660/">#93660</a>
+, <a href="https://github.com/rust-lang/rust/pull/94861/">#94861</a>
+, <a href="https://github.com/rust-lang/rust/pull/98166/">#98166</a>
+, <a href="https://github.com/rust-lang/rust/pull/98548/">#98548</a>
+, <a href="https://github.com/rust-lang/rust/pull/99479/">#99479</a>
+, <a href="https://github.com/rust-lang/rust/pull/101634/">#101634</a>
+, <a href="https://github.com/rust-lang/rust/pull/101701/">#101701</a>
+, <a href="https://github.com/rust-lang/rust/pull/103065/">#103065</a>
+, <a href="https://github.com/rust-lang/rust/pull/105027/">#105027</a>
+, <a href="https://github.com/rust-lang/rust/pull/105063/">#105063</a>&#160;<a href="#fnref:9" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:10">
+<p><a href="https://github.com/rust-lang/rust/pull/92860/">#92860</a>
+, <a href="https://github.com/rust-lang/rust/pull/93132/">#93132</a>
+, <a href="https://github.com/rust-lang/rust/pull/93954/">#93954</a>
+, <a href="https://github.com/rust-lang/rust/pull/97599/">#97599</a>
+, <a href="https://github.com/rust-lang/rust/pull/98053/">#98053</a>
+, <a href="https://github.com/rust-lang/rust/pull/98195/">#98195</a>
+, <a href="https://github.com/rust-lang/rust/pull/98390/">#98390</a>
+, <a href="https://github.com/rust-lang/rust/pull/98577/">#98577</a>
+, <a href="https://github.com/rust-lang/rust/pull/98611/">#98611</a>
+, <a href="https://github.com/rust-lang/rust/pull/98681/">#98681</a>
+, <a href="https://github.com/rust-lang/rust/pull/100299/">#100299</a>
+, <a href="https://github.com/rust-lang/rust/pull/100325/">#100325</a>
+, <a href="https://github.com/rust-lang/rust/pull/100582/">#100582</a>
+, <a href="https://github.com/rust-lang/rust/pull/100630/">#100630</a>
+, <a href="https://github.com/rust-lang/rust/pull/101106/">#101106</a>
+, <a href="https://github.com/rust-lang/rust/pull/101204/">#101204</a>
+, <a href="https://github.com/rust-lang/rust/pull/101633/">#101633</a>
+, <a href="https://github.com/rust-lang/rust/pull/101722/">#101722</a>
+, <a href="https://github.com/rust-lang/rust/pull/101770/">#101770</a>
+, <a href="https://github.com/rust-lang/rust/pull/101914/">#101914</a>
+, <a href="https://github.com/rust-lang/rust/pull/103653/">#103653</a>
+, <a href="https://github.com/rust-lang/rust/pull/105182/">#105182</a>&#160;<a href="#fnref:10" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+</ol>
+</div>
+
+</div>
+
+
+    </main>
+
+    
+      
+    
+  </body>
+</html>

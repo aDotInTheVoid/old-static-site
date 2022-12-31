@@ -5,7 +5,26 @@
     <link>https://adotinthevoid.github.io/posts/</link>
     <description>Recent content in Blog Posts on Nixon Enraght-Moony</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Wed, 20 May 2020 00:00:00 +0000</lastBuildDate><atom:link href="https://adotinthevoid.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 31 Dec 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://adotinthevoid.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Rustdoc JSON in 2022 and beyond</title>
+      <link>https://adotinthevoid.github.io/posts/2022/12/rustdoc-json-in-2022-and-beyond/</link>
+      <pubDate>Sat, 31 Dec 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://adotinthevoid.github.io/posts/2022/12/rustdoc-json-in-2022-and-beyond/</guid>
+      <description>It&amp;rsquo;s that time of year again, when everyone is writing excellent summary articles about what happened this year, and goals for the next one. I figured I should do the same for rustdoc JSON.
+What is rustdoc JSON? If you haven&amp;rsquo;t heard of it yet, rustdoc JSON is an unstable feature for rustdoc that allows rustdoc to output a JSON description of a crates API, as opposed to the stable HTML output.</description>
+    </item>
+    
+    <item>
+      <title>JSONPath</title>
+      <link>https://adotinthevoid.github.io/posts/2022/08/jsonpath/</link>
+      <pubDate>Mon, 22 Aug 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://adotinthevoid.github.io/posts/2022/08/jsonpath/</guid>
+      <description>[ {&amp;#34;a&amp;#34;: 1, &amp;#34;b&amp;#34;: 1}, {&amp;#34;a&amp;#34;: 2, &amp;#34;b&amp;#34;: 2}, {&amp;#34;a&amp;#34;: 1, &amp;#34;b&amp;#34;: 3} ] JSONPath Freestrings Craftspider Redis Jayway Gatling Goessner $[*][?(@.a==1)].b [1, 3] c d $[?(@.a==1)].b [1, 3] { &amp;#34;x&amp;#34;: {&amp;#34;a&amp;#34;: 1, &amp;#34;b&amp;#34;: 1}, &amp;#34;y&amp;#34;: {&amp;#34;a&amp;#34;: 2, &amp;#34;b&amp;#34;: 2}, &amp;#34;z&amp;#34;: {&amp;#34;a&amp;#34;: 1, &amp;#34;b&amp;#34;: 3} } $[*][?(@.a==1)].b $[?(@.a==1)].b Appenix A: Testing apt install cargo git golang-go maven ninja-build nodejs openjdk-17-jdk vim unzip php python3 curl ghc cabal-install rebar3 composer wget dotnet6 elixir gawk clang libglib2.</description>
+    </item>
+    
     <item>
       <title>Metaregex: Python can be fast too</title>
       <link>https://adotinthevoid.github.io/posts/2020/05/metaregex-python-can-be-fast-too/</link>
